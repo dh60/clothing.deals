@@ -2,3 +2,4 @@ patchright
 orjson
 fastapi
 uvicorn
+aiofiles
