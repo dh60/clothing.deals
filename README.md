@@ -10,10 +10,6 @@ An automated web scraper and interactive front-end designed to find the best clo
 -   **Intelligent Data Collection**: Optimizes requests by first fetching metadata to determine the exact number of pages and size variations to scrape, minimizing redundant calls.
 -   **CAPTCHA Handling**: Opens a browser window when a CAPTCHA is detected, pausing the scrape and allowing the user to solve it manually before seamlessly resuming.
 -   **Dynamic & Responsive Frontend**: A pure JavaScript interface that filters, sorts, and groups data instantly without page reloads.
--   **Powerful Filtering & Sorting**:
-    -   Filter by gender, brand, size, discount percentage, and price range.
-    -   Group results by `Category > Brand` or `Brand > Category`.
-    -   Sort by highest discount or lowest price.
 
 ## Installation
 
