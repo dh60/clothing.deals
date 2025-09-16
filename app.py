@@ -2,14 +2,17 @@ import asyncio
 import orjson
 import os
 import aiofiles
+import yaml
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from scraper import SsenseScraper, Product
+
 app = FastAPI()
 templates = Jinja2Templates(directory=".")
 CACHE_FILE = 'products_cache.json'
 all_products = []
+
 async def run_scrape():
     global all_products
     if os.path.exists(CACHE_FILE):
