@@ -1,5 +1,4 @@
 import urllib.parse
-
 from .base import BaseScraper, Product
 
 class SsenseScraper(BaseScraper):
@@ -31,3 +30,8 @@ class SsenseScraper(BaseScraper):
             sale_price=sale_price, original_price=original_price, discount=discount,
             link=link, sizes=[size] if size else []
         )
+
+    def _parse_metadata(self, data: dict) -> tuple[int, list]:
+        total_pages = data.get('pagination_info', {}).get('totalPages', 1)
+        sizes_metadata = data.get('metadata', {}).get('sizes', [])
+        return total_pages, sizes_metadata

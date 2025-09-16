@@ -1,12 +1,12 @@
 from .ssense import SsenseScraper
+from .gravitypope import GravitypopeScraper
 
 class ScraperFactory:
     _scrapers = {
         'SsenseScraper': SsenseScraper,
+        'GravitypopeScraper': GravitypopeScraper,
     }
 
     @classmethod
-    def get(cls, scraper_name: str):
-        if scraper_name in cls._scrapers:
-            return cls._scrapers[scraper_name]
-        raise ValueError(f"Scraper {scraper_name} not registered.")
+    def get(cls, scraper_class: str):
+        return cls._scrapers.get(scraper_class)
