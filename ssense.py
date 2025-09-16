@@ -8,8 +8,6 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 from patchright.async_api import async_playwright
 
-ITEMS_PER_PAGE = 120
-
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -34,7 +32,6 @@ CATEGORIES = [
     ]
 ]
 
-# Unchanged dataclasses and functions
 @dataclass
 class Product:
     category_key: str
@@ -125,12 +122,10 @@ class SsenseScraper:
                     return products, None
 
             except Exception as e:
-                logging.warning(f"Attempt {attempt + 1}/2 for {url} failed: {e}. Checking pause state before retry...")
                 await self.scraping_paused.wait()
                 await asyncio.sleep(1)
 
         self.stats['requests_failed'] += 1
-        logging.error(f"All attempts failed for URL: {url}. Returning empty.")
         if return_metadata:
             return [], None, None
         else:
@@ -172,7 +167,7 @@ class SsenseScraper:
                     for size_info in sizes_metadata:
                         size_key = size_info['key']
                         item_count = size_info['docCount']
-                        total_pages_for_size = math.ceil(item_count / ITEMS_PER_PAGE)
+                        total_pages_for_size = math.ceil(item_count / 120)
                         
                         for p in range(1, total_pages_for_size + 1):
                             url = self._build_url(gender, category, page=p, size=size_key)
