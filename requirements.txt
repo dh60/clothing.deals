@@ -1,0 +1,4 @@
+patchright
+orjson
+fastapi
+uvicorn
