@@ -50,6 +50,7 @@ Follow these instructions to get a local copy up and running.
     ```
 
 ## Usage
+![Terminal output](screenshot.png)
 
 #### Step 1: Run the Scraper
 
