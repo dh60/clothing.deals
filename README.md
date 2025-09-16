@@ -2,7 +2,7 @@
 
 ![clothing.deals interface](screenshot.png)
 
-An automated web scraper and interactive front-end designed to find the best clothing sales across multiple retailers. This tool efficiently scrapes hundreds of thousands of products, handles anti-bot measures, and presents the data in a fast, filterable, and user-friendly interface.
+An automated web scraper and interactive front-end designed to find the best clothing sales across multiple retailers. This tool efficiently scrapes hundreds of thousands of products, handles anti-bot measures, and presents the data in a fast, filterable, and user-friendly interface inspired by [RockAuto](https://www.rockauto.com).
 
 ## Key Features
 
