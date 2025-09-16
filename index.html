@@ -77,6 +77,7 @@
         select#gender { width: 5rem }
         select#sort_by { width: 11rem }
         input#brands, input#sizes { width: 10rem }
+
         .results-header {
             text-align: center;
             margin-bottom: .3rem
@@ -121,10 +122,10 @@
         .group-inner {
             font-weight: 500;
             background: #fff;
-            margin-left: 1.5rem;
+            margin-left: 1.5rem; /* Indent inner level */
         }
         .product-list {
-            margin-left: 3rem;
+            margin-left: 3rem; /* Indent product table further */
             padding-left: 0.5rem;
             border-left: 2px solid var(--nested-border-color);
         }
@@ -219,9 +220,6 @@
         function getBrandTitle(p) {
             return p.brand.charAt(0).toUpperCase() + p.brand.slice(1);
         }
-        function getSiteTitle(p) {
-            return p.site.charAt(0).toUpperCase() + p.site.slice(1);
-        }
         function getGroupedData(group_by, filtered) {
             let type, groups = {};
             if (group_by === 'category_brand') {
@@ -299,7 +297,6 @@
                 show_brand ? {key: 'brand', header: 'Brand', getText: p => getBrandTitle(p), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'brand-column'} : null,
                 {key: 'product', header: 'Product', getText: p => p.name, headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'product-column'},
                 show_category ? {key: 'category', header: 'Category', getText: p => getCategory(p), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'category-column'} : null,
-                {key: 'site', header: 'Site', getText: p => getSiteTitle(p), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'site-column'},
                 {key: 'sizes', header: 'Sizes', getText: p => p.sizes.join(', '), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'sizes-column'},
                 {key: 'sale', header: 'Sale', getText: p => p.sale_price_str || '-', headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {textAlign: 'left'}, class: 'price'},
                 {key: 'original', header: 'Original', getText: p => p.original_price_str || '-', headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {textAlign: 'left'}, class: 'price'},
@@ -329,8 +326,7 @@
                 if (show_category) {
                     html += `<td class="category-column">${getCategory(p)}</td>`;
                 }
-                html += `<td class="site-column">${getSiteTitle(p)}</td>` +
-                    `<td class="sizes-column">${p.sizes.join(', ')}</td>` +
+                html += `<td class="sizes-column">${p.sizes.join(', ')}</td>` +
                     `<td class="price">${p.sale_price_str || '-'}</td>` +
                     `<td class="price"><s>${p.original_price_str || '-'}</s></td>` +
                     `<td class="spacer"></td>` +
@@ -419,33 +415,52 @@
             }
             return html;
         }
+
+        // --- UPDATED FUNCTION WITH SIZE SORTING ---
         async function loadData() {
             try {
                 document.getElementById('stats-p').textContent = 'Loading...';
                 document.getElementById('progress-container').style.display = 'block';
                 const response = await fetch('/data');
                 allProducts = await response.json();
+
+                // Define the logical order for standard sizes. Lower numbers appear first.
                 const sizeOrder = {
                     'XXXS': 1, 'XXS': 2, 'XS': 3, 'S': 4, 'M': 5,
                     'L': 6, 'XL': 7, 'XXL': 8, 'XXXL': 9
                 };
+
                 allProducts.forEach(p => {
+                    // Price formatting (unchanged)
                     p.sale_price_str = p.sale_price ? `$${Math.round(p.sale_price).toLocaleString('en-US')}` : '-';
                     p.original_price_str = p.original_price ? `$${Math.round(p.original_price).toLocaleString('en-US')}` : '-';
+
+                    // --- NEW CUSTOM SIZE SORTING LOGIC ---
                     p.sizes.sort((a, b) => {
                         const aIsNum = !isNaN(a);
                         const bIsNum = !isNaN(b);
                         const aIsStd = sizeOrder[a] !== undefined;
                         const bIsStd = sizeOrder[b] !== undefined;
+
+                        // Case 1: Both are numbers (e.g., 8, 10, 42) -> Sort numerically
                         if (aIsNum && bIsNum) return Number(a) - Number(b);
+
+                        // Case 2: Both are standard sizes (e.g., S, M, XL) -> Sort by predefined order
                         if (aIsStd && bIsStd) return sizeOrder[a] - sizeOrder[b];
+
+                        // Case 3: One is a number, the other isn't -> Numbers always come first
                         if (aIsNum && !bIsNum) return -1;
                         if (!aIsNum && bIsNum) return 1;
+
+                        // Case 4: One is a standard size, the other is not (e.g., 'S' vs 'One Size') -> Standard sizes come first
                         if (aIsStd && !bIsStd) return -1;
                         if (!aIsStd && bIsStd) return 1;
+
+                        // Fallback: For any other cases (e.g., 'One Size' vs 'Adjustable'), sort alphabetically
                         return a.localeCompare(b);
                     });
                 });
+
                 renderResults();
             } catch (error) {
                 document.getElementById('stats-p').textContent = 'Error loading data';
@@ -454,6 +469,7 @@
                 document.getElementById('progress-container').style.display = 'none';
             }
         }
+
         document.addEventListener("DOMContentLoaded", () => {
             const params = new URLSearchParams(window.location.search);
             document.getElementById('gender').value = params.get('gender') || 'all';
