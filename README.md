@@ -1,6 +1,6 @@
 # clothing.deals
 
-![clothing.deals interface](screenshot.png)
+![clothing.deals interface](screenshots/screenshot.png)
 
 An automated web scraper and interactive front-end designed to find the best clothing sales across multiple retailers. This tool efficiently scrapes hundreds of thousands of products, handles anti-bot measures, and presents the data in a fast and user-friendly interface inspired by [RockAuto](https://www.rockauto.com).
 
@@ -41,7 +41,7 @@ An automated web scraper and interactive front-end designed to find the best clo
     ```
 
 ## Usage
-![Terminal output](terminal.png)
+![Terminal output](screenshots/terminal.png)
 
 #### Step 1: Run the Scraper
 
