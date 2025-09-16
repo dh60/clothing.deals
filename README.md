@@ -15,7 +15,7 @@ An automated web scraper and interactive front-end designed to find the best clo
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/dh60/clothing.deals.git
+    git clone https://github.com/your-username/clothing.deals.git
     cd clothing.deals
     ```
 
