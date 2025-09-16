@@ -1,7 +1,5 @@
 patchright
 orjson
 fastapi
-jinja2
 uvicorn
 aiofiles
-pyyaml
