@@ -15,16 +15,7 @@ An automated web scraper and interactive front-end designed to find the best clo
     -   Group results by `Category > Brand` or `Brand > Category`.
     -   Sort by highest discount or lowest price.
 
-## Getting Started
-
-Follow these instructions to get a local copy up and running.
-
-### Prerequisites
-
--   Python 3.9 or newer
--   pip (Python package installer)
-
-### Installation
+## Installation
 
 1.  **Clone the repository:**
     ```sh
