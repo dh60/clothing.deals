@@ -54,7 +54,7 @@ Follow these instructions to get a local copy up and running.
 
 #### Step 1: Run the Scraper
 
-Execute the scraper script from your terminal. This will fetch all the product data and save it as `data.json` in the root directory.
+Execute app.py from your terminal. This will fetch all the product data and save it as a .json in the root directory.
 
 ```sh
 python app.py
