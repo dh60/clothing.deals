@@ -45,7 +45,6 @@ An automated web scraper and interactive front-end designed to find the best clo
 
 
 ## Usage
-![Terminal output](screenshots/terminal.png)
 
 #### Step 1: Run the Scraper
 
