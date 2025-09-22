@@ -49,18 +49,21 @@ An automated web scraper and interactive front-end designed to find the best clo
 
 #### Step 1: Run the Scraper
 
-Execute app.py from your terminal. This will fetch all the product data and save it as a .json in the root directory.
+Execute app.py from your terminal. This will fetch all the product data and save it as a database in the root directory.
+
+```sh
+python ssense.py
+```
+
+-   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA in that window to allow the script to continue.
+
+#### Step 2: Run the server and view the app.
 
 ```sh
 python app.py
 ```
 
--   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA in that window to allow the script to continue.
-
-#### Step 2: View the App
-
-Open your web browser and navigate to:
-
+Then open your browser and go to:
 [http://localhost:8000](http://localhost:8000)
 
 You should now see the `clothing.deals` interface, fully loaded with the data you just scraped.
