@@ -36,6 +36,14 @@ An automated web scraper and interactive front-end designed to find the best clo
     pip install -r requirements.txt
     ```
 
+4.  **Install Chrome (if you don't have it)**
+    ```sh
+    patchright install chrome
+    ```
+
+
+
+
 ## Usage
 ![Terminal output](screenshots/terminal.png)
 
