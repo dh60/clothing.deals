@@ -4,4 +4,3 @@ fastapi
 uvicorn
 lxml
 tdqm
-jinja2
