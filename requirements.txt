@@ -2,4 +2,6 @@ patchright
 orjson
 fastapi
 uvicorn
-aiofiles
+lxml
+tdqm
+jinja2

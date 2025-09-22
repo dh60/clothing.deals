@@ -1,203 +1,274 @@
 import asyncio
 import orjson
-import tempfile
-import urllib.parse
-import logging
-import math
-from dataclasses import dataclass, field
-from collections import defaultdict
-from patchright.async_api import async_playwright
+import time
+import sqlite3
+import re
+from typing import List, Dict, Any, Tuple, Optional
+from lxml import etree
+from patchright.async_api import async_playwright, APIRequestContext, Page, BrowserContext, Error as PlaywrightError
+from tqdm.asyncio import tqdm
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+BASE_URL = "https://www.ssense.com/en-ca/"
+SITEMAP_URL = "https://www.ssense.com/sitemap.xml"
+PROFILE_DIR = "user_data"
+DB_FILE = "products.db"
+CONCURRENCY = 500
+RETRY_DELAY = 6
+MAX_RETRIES = 3
 
-CATEGORIES = [
-    ("men", category) for category in [
-        "belts-suspenders", "eyewear", "face-masks", "gloves", "hats", "jewelry",
-        "keychains", "pocket-squares-tie-bars", "scarves", "socks", "ties",
-        "towels", "wallets-card-holders", "watches", "bags", "jackets-coats",
-        "jeans", "pants", "shirts", "shorts", "suits-blazers", "sweaters",
-        "swimwear", "tops", "underwear-loungewear", "shoes"
-    ]
-] + [
-    ("women", category) for category in [
-        "bag-accessories", "belts-suspenders", "eyewear", "face-masks",
-        "fine-jewelry", "gloves", "hats", "jewelry", "keychains", "scarves",
-        "socks", "tech", "wallets-card-holders", "bags", "activewear", "dresses",
-        "jackets-coats", "jeans", "jumpsuits", "lingerie", "pants", "shorts",
-        "skirts", "sweaters", "swimwear", "tops", "shoes"
-    ]
-]
+ProductData = Dict[str, Any]
 
-@dataclass
-class Product:
-    category_key: str
-    brand: str
-    name: str
-    sale_price: float
-    original_price: float
-    discount: int
-    link: str
-    sizes: list[str] = field(default_factory=list)
-
-def create_product(category_key: str, item: dict, size: str | None = None) -> Product:
-    price_info = item.get('priceByCountry', [{}])[0]
-    sale_price_str = price_info.get('formattedLowest', {}).get('amount', '')
-    original_price_str = price_info.get('formattedPrice', '')
-    def parse_price(price_str: str) -> float:
-        return float(price_str.replace("$", "").replace(",", "")) if price_str else 0.0
-    sale_price = parse_price(sale_price_str)
-    original_price = parse_price(original_price_str)
-    discount = round((original_price - sale_price) / original_price * 100) if original_price > 0 else 0
-    brand = (item.get('brand', {}).get('name', {}).get('en', '') or item.get('brand', '')).lower()
-    return Product(
-        category_key=category_key, brand=brand, name=item.get('name', {}).get('en', '') or item.get('name', ''),
-        sale_price=sale_price, original_price=original_price, discount=discount,
-        link=f"https://www.ssense.com/en-ca{item.get('url')}", sizes=[size] if size else []
-    )
-
-class SsenseScraper:
-    def __init__(self):
-        self.scraping_paused = asyncio.Event()
-        self.scraping_paused.set()
-        self.stats = defaultdict(int)
-
-    def _build_url(self, gender: str, category: str, page: int = 1, size: str | None = None) -> str:
-        base_url = f"https://www.ssense.com/en-ca/{gender}/{category}.json"
-        params = {}
-        if size: params['sizes'] = size
-        if page > 1: params['page'] = page
-        if not params: return base_url
-        return f"{base_url}?{urllib.parse.urlencode(params)}"
-
-    async def _solve_captcha(self, context, url: str):
-        self.stats['captchas_triggered'] += 1
-        logging.warning(f"CAPTCHA detected at {url}. Please solve it in the browser.")
-        page = await context.new_page()
-        await page.goto(url)
-        while True:
-            try:
-                resp = await context.request.get(url)
-                text = await resp.text()
-                if '<!DOCTYPE html>' not in text:
-                    orjson.loads(text)
-                    logging.info(f"CAPTCHA solved for {url}. Resuming scrape.")
-                    break
-            except Exception: pass
-            await asyncio.sleep(1)
-        await page.close()
-        self.scraping_paused.set()
-      
-    async def _fetch_page(self, context, url: str, category_key: str, size: str | None = None, return_metadata: bool = False):
-        await self.scraping_paused.wait()
+def init_db():
+    """Initializes a normalized three-table schema for maximum performance."""
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DROP TABLE IF EXISTS product_sizes")
+        cursor.execute("DROP TABLE IF EXISTS sizes")
+        cursor.execute("DROP TABLE IF EXISTS products")
         
-        for attempt in range(2):
+        cursor.execute("""
+            CREATE TABLE products (
+                id INTEGER PRIMARY KEY,
+                url TEXT UNIQUE NOT NULL, name TEXT, brand TEXT, gender TEXT, category TEXT,
+                regular REAL, lowest REAL, description TEXT, images TEXT, discount INTEGER,
+                is_genderless INTEGER NOT NULL DEFAULT 0
+            )""")
+        
+        cursor.execute("""
+            CREATE TABLE sizes (
+                id INTEGER PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            )""")
+
+        cursor.execute("""
+            CREATE TABLE product_sizes (
+                product_id INTEGER NOT NULL,
+                size_id INTEGER NOT NULL,
+                FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+                FOREIGN KEY (size_id) REFERENCES sizes (id) ON DELETE CASCADE,
+                PRIMARY KEY (product_id, size_id)
+            )""")
+
+        cursor.execute("CREATE INDEX idx_product_brand ON products (brand)")
+        cursor.execute("CREATE INDEX idx_product_gender ON products (gender)")
+        cursor.execute("CREATE INDEX idx_product_lowest ON products (lowest)")
+        cursor.execute("CREATE INDEX idx_product_discount ON products (discount)")
+        cursor.execute("CREATE INDEX idx_size_name ON sizes (name)")
+        conn.commit()
+
+def get_product_count() -> int:
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            return conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+    except sqlite3.Error:
+        return 0
+
+NS = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9', 'image': 'http://www.google.com/schemas/sitemap-image/1.1'}
+
+def clean_size(size_name: str) -> Optional[str]:
+    """
+    Cleans a size string.
+    - If it's purely letters (e.g., "XL"), return as is.
+    - If it contains numbers (e.g., "US WAIST 32"), return only the first number found.
+    """
+    if not size_name:
+        return None
+    if size_name.isalpha():
+        return size_name.upper()
+    match = re.search(r'\d+', size_name)
+    if match:
+        return match.group(0)
+    return size_name.upper()
+
+async def handle_captcha(api: APIRequestContext, page: Page, solver_lock: asyncio.Lock, captcha_event: asyncio.Event, sem: asyncio.Semaphore):
+    if solver_lock.locked():
+        await captcha_event.wait()
+        return
+    async with solver_lock:
+        async with sem:
+            check_resp = await api.get(BASE_URL)
+        if check_resp.status != 403:
+            return
+        captcha_event.clear()
+        tqdm.write("\n--- CAPTCHA DETECTED ---")
+        await page.bring_to_front()
+        await page.reload()
+        input("Please solve the CAPTCHA and press Enter.")
+        captcha_event.set()
+        tqdm.write("CAPTCHA solved. Resuming...")
+
+async def fetch(url: str, api: APIRequestContext, page: Page, sem: asyncio.Semaphore, solver_lock: asyncio.Lock, captcha_event: asyncio.Event) -> Optional[bytes]:
+    retries = 0
+    while retries < MAX_RETRIES:
+        await captcha_event.wait()
+        async with sem:
             try:
-                await self.scraping_paused.wait()
-                
-                resp = await context.request.get(url)
-                text = await resp.text()
-                
-                if '<!DOCTYPE html>' in text:
-                    if self.scraping_paused.is_set():
-                        self.scraping_paused.clear()
-                        await self._solve_captcha(context, url)
-                    await self.scraping_paused.wait()
+                resp = await api.get(url)
+                if resp.ok: return await resp.body()
+
+                if resp.status == 404:
+                    tqdm.write(f"HTTP 404 Not Found for {url}. Skipping.")
+                    return None
+
+                if resp.status == 403:
+                    await handle_captcha(api, page, solver_lock, captcha_event, sem)
                     continue
+                tqdm.write(f"HTTP {resp.status} for {url}. Retrying...")
+            except PlaywrightError as e:
+                tqdm.write(f"Network error for {url}: {e}. Retrying...")
+        retries += 1
+        await asyncio.sleep(RETRY_DELAY)
+    tqdm.write(f"GIVING UP on {url} after {MAX_RETRIES} retries.")
+    return None
 
-                self.stats['requests_attempted'] += 1
-                data = orjson.loads(text)
-                products = [create_product(category_key, item, size=size) for item in data.get('products', [])]
-                self.stats['products_found_raw'] += len(products)
-                self.stats['requests_succeeded'] += 1
-                
-                if return_metadata:
-                    total_pages = data.get('pagination_info', {}).get('totalPages', 1)
-                    sizes_metadata = data.get('metadata', {}).get('sizes', [])
-                    return products, total_pages, sizes_metadata
-                else:
-                    return products, None
+def parse_product_sitemap(xml: bytes) -> List[Tuple[str, List[str]]]:
+    root = etree.fromstring(xml)
+    items = []
+    for elem in root.xpath('//s:url[contains(s:loc, "/product/")]', namespaces=NS):
+        try:
+            url = elem.xpath('s:loc/text()', namespaces={'s': NS['s']})[0]
+            images = elem.xpath('image:image/image:loc/text()', namespaces={'image': NS['image']})
+            items.append((url.replace('/en-us/', '/en-ca/'), images))
+        except IndexError:
+            continue
+    return items
 
-            except Exception as e:
-                await self.scraping_paused.wait()
-                await asyncio.sleep(1)
+def format_product(data: Dict, url: str, images: List[str]) -> Optional[ProductData]:
+    """Formats the product and returns sizes as a Python list."""
+    try:
+        prod = data["product"]
+        regular_price = prod.get("price", [{}])[0].get("regular")
+        lowest_price = prod.get("price", [{}])[0].get("lowest", {}).get("amount")
+        is_genderless = prod.get("isGenderless", False) # Extract isGenderless
+        
+        raw_sizes = [v.get("size", {}).get("name") for v in prod.get("variants", []) if v.get("inStock") and v.get("size", {}).get("name")]
+        cleaned_sizes = {clean_size(s) for s in raw_sizes if clean_size(s)}
+        available_sizes = sorted(list(cleaned_sizes))
 
-        self.stats['requests_failed'] += 1
-        if return_metadata:
-            return [], None, None
-        else:
-            return [], None
-       
-    async def scrape_all(self):
-        logging.info("Starting scrape...")
-        async with async_playwright() as pw:
-            context = await pw.chromium.launch_persistent_context(
-                tempfile.mkdtemp(), channel="chrome", headless=False, no_viewport=True
-            )
-            products_dict = {}
-            all_page_tasks = []
+        return {
+            "name": prod["name"]["en"], "brand": prod["brand"]["name"]["en"],
+            "gender": prod.get("gender"), "category": prod.get("category", {}).get("name", {}).get("en"),
+            "regular": regular_price, "lowest": lowest_price,
+            "description": prod.get("description", {}).get("en"),
+            "sizes": available_sizes,
+            "url": url, "images": orjson.dumps(images).decode(),
+            "discount": round(100 * (regular_price - lowest_price) / regular_price) if regular_price and lowest_price and regular_price > lowest_price else 0,
+            "is_genderless": is_genderless, # Add to dictionary
+        }
+    except (KeyError, IndexError, TypeError):
+        return None
 
-            logging.info(f"Stage 1: Starting initial discovery for {len(CATEGORIES)} categories.")
-            initial_tasks = [
-                ( (gender, category), asyncio.create_task(self._fetch_page(
-                    context, self._build_url(gender, category), f"{gender}_{category}", return_metadata=True
-                ))) for gender, category in CATEGORIES
-            ]
-            initial_results = await asyncio.gather(*[task for _, task in initial_tasks], return_exceptions=True)
+async def sitemap_producer(url: str, product_queue: asyncio.Queue, **kwargs):
+    content = await fetch(url, **kwargs)
+    if content:
+        loop = asyncio.get_running_loop()
+        items = await loop.run_in_executor(None, parse_product_sitemap, content)
+        for item in items:
+            await product_queue.put(item)
 
-            logging.info("Stage 2: Calculating all pages from initial metadata...")
-            for i, result in enumerate(initial_results):
-                if isinstance(result, Exception): continue
-                (gender, category), _ = initial_tasks[i]
-                category_key = f"{gender}_{category}"
-                products_base, total_pages_base, sizes_metadata = result
+async def product_consumer(product_queue: asyncio.Queue, results_queue: asyncio.Queue, pbar: tqdm, **kwargs):
+    while True:
+        item = await product_queue.get()
+        if item is None: break
+        url, images = item
+        try:
+            json_content = await fetch(f"{url}.json", **kwargs)
+            if json_content:
+                product = format_product(orjson.loads(json_content), url, images)
+                if product:
+                    await results_queue.put(product)
+        finally:
+            product_queue.task_done()
+            if pbar: pbar.update(1)
 
-                for prod in products_base:
-                    if prod.link not in products_dict:
-                        products_dict[prod.link] = prod
-
-                if not sizes_metadata:
-                    for p in range(2, (total_pages_base or 1) + 1):
-                        url = self._build_url(gender, category, page=p)
-                        all_page_tasks.append(asyncio.create_task(self._fetch_page(context, url, category_key)))
-                else:
-                    for size_info in sizes_metadata:
-                        size_key = size_info['key']
-                        item_count = size_info['docCount']
-                        total_pages_for_size = math.ceil(item_count / 120)
-                        
-                        for p in range(1, total_pages_for_size + 1):
-                            url = self._build_url(gender, category, page=p, size=size_key)
-                            all_page_tasks.append(asyncio.create_task(self._fetch_page(context, url, category_key, size=size_key)))
+async def db_writer(results_queue: asyncio.Queue):
+    conn = sqlite3.connect(DB_FILE, isolation_level=None)
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA journal_mode = WAL;")
+    cursor.execute("PRAGMA synchronous = NORMAL;")
+    size_cache = {name: id for id, name in cursor.execute("SELECT id, name FROM sizes").fetchall()}
+    while True:
+        product = await results_queue.get()
+        if product is None: break
+        product_sizes = product.pop("sizes")
+        try:
+            cursor.execute("BEGIN")
+            cursor.execute("""
+                INSERT OR REPLACE INTO products (url, name, brand, gender, category, regular, lowest, description, images, discount, is_genderless)
+                VALUES (:url, :name, :brand, :gender, :category, :regular, :lowest, :description, :images, :discount, :is_genderless)
+            """, product)
+            product_id = cursor.lastrowid
             
-            if all_page_tasks:
-                logging.info(f"Stage 3: Executing {len(all_page_tasks)} total page tasks in one wave.")
-                all_results = await asyncio.gather(*all_page_tasks, return_exceptions=True)
-                for res in all_results:
-                    if isinstance(res, Exception): continue
-                    prods, _ = res
-                    for prod in prods:
-                        if prod.link in products_dict:
-                            if prod.sizes and prod.sizes[0] not in products_dict[prod.link].sizes:
-                                products_dict[prod.link].sizes.append(prod.sizes[0])
-                        else:
-                            products_dict[prod.link] = prod
+            size_ids_to_link = []
+            for size_name in set(product_sizes):
+                if size_name not in size_cache:
+                    cursor.execute("INSERT OR IGNORE INTO sizes (name) VALUES (?)", (size_name,))
+                    size_id = cursor.lastrowid
+                    if size_id != 0: size_cache[size_name] = size_id
+                if size_name in size_cache:
+                    size_ids_to_link.append(size_cache[size_name])
 
-            logging.info("Finalizing results.")
-            products = list(products_dict.values())
-            for p in products: p.sizes.sort()
-            await context.close()
+            if size_ids_to_link:
+                cursor.execute("DELETE FROM product_sizes WHERE product_id = ?", (product_id,))
+                cursor.executemany("INSERT INTO product_sizes (product_id, size_id) VALUES (?, ?)", 
+                                   [(product_id, sid) for sid in size_ids_to_link])
+            cursor.execute("COMMIT")
+        except sqlite3.Error as e:
+            cursor.execute("ROLLBACK")
+            tqdm.write(f"DB Error for {product.get('url', 'N/A')}: {e}")
+        finally:
+            results_queue.task_done()
+    conn.close()
 
-            logging.info("----------- SCRAPE COMPLETE -----------")
-            logging.info(f"Requests Attempted: {self.stats['requests_attempted']}")
-            logging.info(f"Requests Succeeded: {self.stats['requests_succeeded']}")
-            logging.info(f"Requests Failed:    {self.stats['requests_failed']}")
-            logging.info(f"CAPTCHAs Triggered: {self.stats['captchas_triggered']}")
-            logging.info("---------------------------------------")
-            logging.info(f"Raw Products Found: {self.stats['products_found_raw']}")
-            logging.info(f"Unique Products Found: {len(products)}")
-            logging.info("---------------------------------------")
-            return products
+async def scrape():
+    start_time = time.time()
+    init_db()
+    
+    product_queue = asyncio.Queue()
+    results_queue = asyncio.Queue(maxsize=CONCURRENCY * 2)
+    sem = asyncio.Semaphore(CONCURRENCY)
+    solver_lock = asyncio.Lock()
+    captcha_event = asyncio.Event(); captcha_event.set()
+
+    async with async_playwright() as pw:
+        ctx = await pw.chromium.launch_persistent_context(PROFILE_DIR, channel="chrome", headless=False, no_viewport=True)
+        page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+        await page.goto(BASE_URL)
+        api = ctx.request
+
+        shared_args = {"api": api, "page": page, "sem": sem, "solver_lock": solver_lock, "captcha_event": captcha_event}
+
+        print("Discovering and parsing product URLs from sitemaps.")
+        sitemap_content = await fetch(SITEMAP_URL, **shared_args)
+        if not sitemap_content:
+            print("CRITICAL: Main sitemap not found."); return
+
+        root = etree.fromstring(sitemap_content)
+        sitemap_urls = root.xpath("//s:loc[contains(text(), 'sitemap_products_list')]/text()", namespaces={'s': NS['s']})
+
+        producers = [
+            asyncio.create_task(sitemap_producer(url, product_queue, **shared_args))
+            for url in sitemap_urls
+        ]
+        await asyncio.gather(*producers)
+        
+        print(f"✓ Sitemap discovery and parsing finished in {time.time() - start_time:.2f} seconds.")
+        print(f"Found {product_queue.qsize()} total products. Starting concurrent scrape...")
+
+        pbar = tqdm(total=product_queue.qsize(), desc="Scraping Products", unit="item")
+        consumers = [asyncio.create_task(product_consumer(product_queue, results_queue, pbar, **shared_args)) for _ in range(CONCURRENCY)]
+        db_writer_task = asyncio.create_task(db_writer(results_queue))
+
+        await product_queue.join()
+        await results_queue.join()
+
+        for _ in consumers: await product_queue.put(None)
+        await results_queue.put(None)
+        await asyncio.gather(*consumers, db_writer_task)
+        
+        pbar.close()
+
+    print(f"Saved {get_product_count()} products to {DB_FILE} in {time.time() - start_time:.2f} seconds.")
+
+if __name__ == "__main__":
+    asyncio.run(scrape())

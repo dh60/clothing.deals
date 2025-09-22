@@ -5,558 +5,197 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>clothing.deals</title>
     <style>
-        :root {
-            --bg-color: #fff;
-            --text-color: #333;
-            --accent-color: #07f;
-            --discount-high: #dc3545;
-            --discount-medium: #fd7e14;
-            --discount-low: #ffc107;
-            --discount-none: #6c757d;
-            --border-color: #dee2e6;
-            --stripe-color: #f8f9fa;
-            --font-sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-            --progress-bg: #e9ecef;
-            --progress-bar: #007bff;
-            --nested-border-color: #e9ecef;
-        }
-        body {
-            font-family: var(--font-sans);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: .5rem;
-            line-height: 1.2;
-            font-size: .85rem
-        }
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 400;
-            margin: 0 0 .5rem;
-            text-align: center
-        }
-        form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .25rem;
-            margin-bottom: .5rem;
-            padding: .5rem;
-            background: var(--stripe-color);
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,.1);
-            align-items: flex-end
-        }
-        .filter-group {
-            display: flex;
-            flex-wrap: nowrap;
-            gap: .25rem;
-            align-items: flex-end
-        }
-        form > div {
-            flex: 0 0 auto;
-            min-width: 0
-        }
-        label {
-            display: block;
-            font-size: .75rem;
-            margin-bottom: .1rem;
-            color: #495057;
-            text-align: center
-        }
-        input, select {
-            padding: .3rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: .85rem;
-            box-sizing: border-box;
-            text-align: center
-        }
-        input#min_discount { width: 3rem }
-        input#min_price, input#max_price { width: 5rem }
-        select#group_by { width: 9.5rem }
-        select#gender { width: 5rem }
-        select#sort_by { width: 11rem }
-        input#brands, input#sizes { width: 10rem }
-
-        .results-header {
-            text-align: center;
-            margin-bottom: .3rem
-        }
-        .results-header h2 {
-            font-size: 1rem;
-            font-weight: 400;
-            margin: 0
-        }
-        .results-header p {
-            font-size: .75rem;
-            color: #6c757d;
-            margin: .1rem 0 0
-        }
-        .nested-list {
-            margin: 0;
-            overflow-x: auto
-        }
-        .group-header {
-            cursor: pointer;
-            padding: .3rem .5rem;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .group-header:hover {
-            background: #e9ecef;
-        }
-        .group-header .toggle {
-            width: .8rem;
-            height: .8rem;
-            margin-right: .4rem;
-            font-size: .7rem;
-            text-align: center;
-            line-height: .8rem;
-        }
-        .group-outer {
-            font-weight: 600;
-            background: var(--stripe-color);
-        }
-        .group-inner {
-            font-weight: 500;
-            background: #fff;
-            margin-left: 1.5rem; /* Indent inner level */
-        }
-        .product-list {
-            margin-left: 3rem; /* Indent product table further */
-            padding-left: 0.5rem;
-            border-left: 2px solid var(--nested-border-color);
-        }
-        table {
-            border-collapse: collapse;
-            font-size: .8rem;
-            width: 100%;
-            table-layout: fixed
-        }
-        th, td {
-            padding: .2rem .3rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap
-        }
-        th {
-            background: var(--stripe-color);
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            text-align: left
-        }
-        td.discount { text-align: center; }
-        tr:nth-child(even) { background: var(--stripe-color) }
-        tr:hover { background: #e9ecef }
-        .discount { font-weight: 700 }
-        .spacer { width: auto; padding: 0 }
-        a { color: var(--accent-color); text-decoration: none }
-        a:hover { text-decoration: underline }
-        .hidden { display: none }
-        .progress-container {
-            width: 100%;
-            max-width: 400px;
-            height: 4px;
-            background: var(--progress-bg);
-            border-radius: 2px;
-            margin: .5rem auto;
-            overflow: hidden;
-            display: none
-        }
-        .progress-bar {
-            width: 100%;
-            height: 100%;
-            background: var(--progress-bar);
-            animation: indeterminate 1.5s linear infinite
-        }
-        @keyframes indeterminate {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-        @media (max-width:768px) {
-            body {
-                padding: .3rem;
-                font-size: .8rem
-            }
-            th, td { padding: .2rem .3rem }
-            .progress-container { max-width: 100% }
-        }
+        :root {--bg-color: #fff;--text-color: #333;--accent-color: #07f;--border-color: #dee2e6;--stripe-color: #f8f9fa;--font-sans: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--progress-bg: #e9ecef;--progress-bar: #007bff;--nested-border-color: #e9ecef;}
+        body {font-family: var(--font-sans);background-color: var(--bg-color);color: var(--text-color);margin: 0;padding: .5rem;line-height: 1.2;font-size: .85rem;}
+        h1 {font-size: 1.5rem;font-weight: 400;margin: 0 0 .5rem;text-align: center;}
+        form {display: flex;flex-wrap: wrap;gap: .25rem;margin-bottom: .5rem;padding: .5rem;background: var(--stripe-color);border-radius: 4px;box-shadow: 0 1px 3px rgba(0,0,0,.1);align-items: flex-end;}
+        .filter-group {display: flex;flex-wrap: nowrap;gap: .25rem;align-items: flex-end;}
+        form > div {flex: 0 0 auto;min-width: 0;}
+        label {display: block;font-size: .75rem;margin-bottom: .1rem;color: #495057;text-align: center;}
+        input, select {padding: .3rem;border: 1px solid var(--border-color);border-radius: 4px;font-size: .85rem;box-sizing: border-box;text-align: center;}
+        input#min_discount { width: 3rem } input#min_price, input#max_price { width: 5rem } select#group_by { width: 9.5rem } select#gender { width: 5rem } select#sort_by { width: 11rem } input#brands, input#sizes { width: 10rem }
+        .results-header {text-align: center;margin-bottom: .3rem;} .results-header h2 {font-size: 1rem;font-weight: 400;margin: 0;} .results-header p {font-size: .75rem;color: #6c757d;margin: .1rem 0 0;}
+        .nested-list {margin: 0;overflow-x: auto;}
+        .group-header {cursor: pointer;padding: .3rem .5rem;margin: 0;display: flex;align-items: center;border-bottom: 1px solid var(--border-color);}
+        .group-header:hover {background: #e9ecef;}
+        .group-header .toggle {width: .8rem;height: .8rem;margin-right: .4rem;font-size: .7rem;text-align: center;line-height: .8rem;}
+        .group-outer {font-weight: 600;background: var(--stripe-color);}
+        .group-inner {font-weight: 500;background: #fff;margin-left: 1.5rem;}
+        .product-list {margin-left: 3rem;padding-left: 0.5rem;border-left: 2px solid var(--nested-border-color);}
+        table {border-collapse: collapse;font-size: .8rem;width: 100%;table-layout: fixed;}
+        th, td {padding: .2rem .3rem;text-align: left;border-bottom: 1px solid var(--border-color);overflow: hidden;text-overflow: ellipsis;white-space: nowrap;}
+        th {background: var(--stripe-color);font-weight: 600;position: sticky;top: 0;z-index: 1;text-align: left;}
+        td.discount { text-align: center; } tr:nth-child(even) { background: var(--stripe-color) } tr:hover { background: #e9ecef } .discount { font-weight: 700 } .spacer { width: auto; padding: 0 }
+        a { color: var(--accent-color); text-decoration: none } a:hover { text-decoration: underline } .hidden { display: none }
+        .progress-container {width: 100%;max-width: 400px;height: 4px;background: var(--progress-bg);border-radius: 2px;margin: .5rem auto;overflow: hidden;display: none;}
+        .progress-bar {width: 100%;height: 100%;background: var(--progress-bar);animation: indeterminate 1.5s linear infinite;}
+        @keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
     </style>
     <script>
-        let allProducts = [];
+        let currentProducts = [];
         let groupedProducts = new Map();
         let expandedIds = new Set();
+
         function toggleSection(id) {
             const section = document.getElementById(id);
             const toggle = document.querySelector(`[data-toggle="${id}"]`);
-            if (section && toggle) {
-                if (section.classList.contains("hidden")) {
-                    section.classList.remove("hidden");
-                    toggle.textContent = "−";
-                    if (section.innerHTML === '' && groupedProducts.has(id)) {
-                        const products = groupedProducts.get(id);
-                        section.innerHTML = buildTable(products);
-                    }
-                    expandedIds.add(id);
-                } else {
-                    section.classList.add("hidden");
-                    toggle.textContent = "+";
-                    expandedIds.delete(id);
+            if (!section || !toggle) return;
+            
+            if (section.classList.contains("hidden")) {
+                section.classList.remove("hidden");
+                toggle.textContent = "−";
+                if (section.innerHTML === '' && groupedProducts.has(id)) {
+                    section.innerHTML = buildTable(groupedProducts.get(id));
                 }
+                expandedIds.add(id);
+            } else {
+                section.classList.add("hidden");
+                toggle.textContent = "+";
+                expandedIds.delete(id);
             }
         }
-        function getGender(p) {
-            return p.category_key.split('_')[0];
-        }
+
         function getCategory(p) {
-            return p.category_key.split('_')[1].replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return (p.category || 'Unknown Category').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         }
+
         function getBrandTitle(p) {
+            if (!p.brand) return 'Unknown Brand';
             return p.brand.charAt(0).toUpperCase() + p.brand.slice(1);
         }
-        function getGroupedData(group_by, filtered) {
+
+        function getGroupedData(group_by, products) {
             let type, groups = {};
             if (group_by === 'category_brand') {
-                type = 'nested';
-                filtered.forEach(p => {
-                    const outer = getCategory(p);
-                    const inner = getBrandTitle(p);
-                    if (!groups[outer]) groups[outer] = {};
-                    if (!groups[outer][inner]) groups[outer][inner] = [];
-                    groups[outer][inner].push(p);
-                });
+                type = 'nested'; products.forEach(p => { const o = getCategory(p), i = getBrandTitle(p); if (!groups[o]) groups[o] = {}; if (!groups[o][i]) groups[o][i] = []; groups[o][i].push(p); });
             } else if (group_by === 'brand_category') {
-                type = 'nested';
-                filtered.forEach(p => {
-                    const outer = getBrandTitle(p);
-                    const inner = getCategory(p);
-                    if (!groups[outer]) groups[outer] = {};
-                    if (!groups[outer][inner]) groups[outer][inner] = [];
-                    groups[outer][inner].push(p);
-                });
+                type = 'nested'; products.forEach(p => { const o = getBrandTitle(p), i = getCategory(p); if (!groups[o]) groups[o] = {}; if (!groups[o][i]) groups[o][i] = []; groups[o][i].push(p); });
             } else if (group_by === 'category') {
-                type = 'flat';
-                filtered.forEach(p => {
-                    const key = getCategory(p);
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(p);
-                });
-            } else if (group_by === 'brand') {
-                type = 'flat';
-                filtered.forEach(p => {
-                    const key = getBrandTitle(p);
-                    if (!groups[key]) groups[key] = [];
-                    groups[key].push(p);
-                });
+                type = 'flat'; products.forEach(p => { const k = getCategory(p); if (!groups[k]) groups[k] = []; groups[k].push(p); });
+            } else { // Default to brand
+                type = 'flat'; products.forEach(p => { const k = getBrandTitle(p); if (!groups[k]) groups[k] = []; groups[k].push(p); });
             }
-            const sortedGroups = {};
+            const sorted = {};
             Object.keys(groups).sort((a, b) => a.localeCompare(b)).forEach(k => {
-                if (type === 'nested') {
-                    sortedGroups[k] = Object.fromEntries(Object.entries(groups[k]).sort((a, b) => a[0].localeCompare(b[0])));
-                } else {
-                    sortedGroups[k] = groups[k];
-                }
+                if (type === 'nested') { sorted[k] = Object.fromEntries(Object.entries(groups[k]).sort((a, b) => a[0].localeCompare(b[0]))); } else { sorted[k] = groups[k]; }
             });
-            return {type, groups: sortedGroups};
+            return {type, groups: sorted};
         }
-        function measureText(text, extraStyle = {}) {
-            const span = document.createElement('span');
-            span.style.visibility = 'hidden';
-            span.style.position = 'absolute';
-            span.style.whiteSpace = 'nowrap';
-            span.style.padding = '.2rem .3rem';
-            span.style.fontSize = '.8rem';
-            span.style.fontFamily = 'var(--font-sans)';
-            Object.assign(span.style, extraStyle);
-            span.textContent = text;
-            document.body.appendChild(span);
-            const width = span.offsetWidth;
-            document.body.removeChild(span);
-            return width;
-        }
+
         function buildTable(products) {
-            const group_by = document.getElementById('group_by').value;
-            let show_brand = true;
-            let show_category = true;
-            if (group_by === 'category_brand' || group_by === 'brand_category') {
-                show_brand = false;
-                show_category = false;
-            } else if (group_by === 'category') {
-                show_category = false;
-            } else if (group_by === 'brand') {
-                show_brand = false;
-            }
-            const columns = [
-                {key: 'discount', header: 'Discount', getText: p => `${p.discount}%`, headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {fontWeight: '700', textAlign: 'center'}, class: 'discount'},
-                show_brand ? {key: 'brand', header: 'Brand', getText: p => getBrandTitle(p), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'brand-column'} : null,
-                {key: 'product', header: 'Product', getText: p => p.name, headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'product-column'},
-                show_category ? {key: 'category', header: 'Category', getText: p => getCategory(p), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'category-column'} : null,
-                {key: 'sizes', header: 'Sizes', getText: p => p.sizes.join(', '), headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {}, class: 'sizes-column'},
-                {key: 'sale', header: 'Sale', getText: p => p.sale_price_str || '-', headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {textAlign: 'left'}, class: 'price'},
-                {key: 'original', header: 'Original', getText: p => p.original_price_str || '-', headerStyle: {fontWeight: '600', textAlign: 'left'}, cellStyle: {textAlign: 'left'}, class: 'price'},
-            ].filter(c => c);
-            const columnMaxWidths = {};
-            columns.forEach(col => {
-                let maxW = measureText(col.header, col.headerStyle);
-                products.forEach(p => {
-                    maxW = Math.max(maxW, measureText(col.getText(p), col.cellStyle));
-                });
-                columnMaxWidths[col.key] = maxW;
-            });
-            let html = '<table><thead><tr>';
-            columns.forEach(col => {
-                html += `<th class="${col.class}" style="width: ${columnMaxWidths[col.key]}px">${col.header}</th>`;
-            });
-            html += '<th class="spacer"></th></tr></thead><tbody>';
+            let html = '<table><thead><tr>' +
+                '<th>Discount</th><th>Product</th><th>Gender</th><th>Category</th><th>Sizes</th><th>Sale</th><th>Original</th><th class="spacer"></th>' +
+                '</tr></thead><tbody>';
             products.forEach(p => {
-                let progress = Math.min(p.discount / 90, 1);
-                let hue = progress * 120;
-                html += `<tr style="cursor: pointer;" onclick="window.open('${p.link}', '_blank')">` +
-                    `<td class="discount" style="background-color: hsl(${hue}, 80%, 85%);">${p.discount}%</td>`;
-                if (show_brand) {
-                    html += `<td class="brand-column">${getBrandTitle(p)}</td>`;
-                }
-                html += `<td class="product-column">${p.name}</td>`;
-                if (show_category) {
-                    html += `<td class="category-column">${getCategory(p)}</td>`;
-                }
-                html += `<td class="sizes-column">${p.sizes.join(', ')}</td>` +
-                    `<td class="price">${p.sale_price_str || '-'}</td>` +
-                    `<td class="price"><s>${p.original_price_str || '-'}</s></td>` +
-                    `<td class="spacer"></td>` +
-                    `</tr>`;
+                const hue = Math.min(p.discount / 90, 1) * 120;
+                const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
+                const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
+                const gender = p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : '-';
+                html += `<tr style="cursor: pointer;" onclick="window.open('${p.url}', '_blank')">
+                    <td class="discount" style="background-color: hsl(${hue}, 80%, 85%);">${p.discount}%</td>
+                    <td>${p.name}</td>
+                    <td>${gender}</td>
+                    <td>${getCategory(p)}</td>
+                    <td>${p.sizes.join(', ')}</td>
+                    <td>${salePrice}</td>
+                    <td><s>${regularPrice}</s></td>
+                    <td class="spacer"></td>
+                </tr>`;
             });
-            html += '</tbody></table>';
-            return html;
+            return html + '</tbody></table>';
         }
-        function handleFormChange() {
-            updateURL();
-            renderResults();
-        }
-        function updateURL() {
-            const form = document.querySelector("form");
-            const params = new URLSearchParams();
-            const formData = new FormData(form);
-            for (const [n, a] of formData) {
-                if (document.querySelector(`[name="${n}"]`).type === 'checkbox') {
-                    if (a) params.set(n, 'true');
-                } else if (a) {
-                    params.set(n, a);
-                }
-            }
-            history.pushState({}, '', params.toString() ? '?' + params.toString() : window.location.pathname);
-        }
-        function renderResults() {
-            const params = new URLSearchParams(window.location.search);
-            const selected_gender = params.get('gender') || 'all';
-            const brands_str = params.get('brands') || '';
-            const sizes_str = params.get('sizes') || '';
-            const min_discount = parseInt(params.get('min_discount') || '0', 10);
-            const min_price = parseInt(params.get('min_price') || '0', 10);
-            const max_price = params.get('max_price') ? parseInt(params.get('max_price'), 10) : Infinity;
-            const sort_by = params.get('sort_by') || 'discount_desc';
-            const group_by = params.get('group_by') || 'brand';
-            const brands_set = brands_str.split(',').map(b => b.trim().toLowerCase()).filter(b => b);
-            const sizes_set = sizes_str.split(',').map(s => s.trim().toUpperCase()).filter(s => s);
-            let filtered = allProducts.filter(p => {
-                if (brands_set.length && !brands_set.includes(p.brand)) return false;
-                if (sizes_set.length && !p.sizes.some(size => sizes_set.includes(size))) return false;
-                if (selected_gender !== 'all' && getGender(p) !== selected_gender) return false;
-                if (p.discount < min_discount) return false;
-                if (p.sale_price < min_price || (!isNaN(max_price) && p.sale_price > max_price)) return false;
-                return true;
-            });
-            if (sort_by === 'discount_desc') {
-                filtered.sort((a, b) => b.discount - a.discount);
-            } else if (sort_by === 'price_asc') {
-                filtered.sort((a, b) => a.sale_price - b.sale_price);
-            }
+
+        function renderUI() {
+            const group_by = document.getElementById('group_by').value;
             groupedProducts.clear();
-            const grouped_data = getGroupedData(group_by, filtered);
-            const stats = {found_items: filtered.length, total_items: allProducts.length};
-            document.getElementById('stats-p').textContent = `Found: ${stats.found_items} items (from ${stats.total_items} total)`;
-            document.getElementById('nested-list').innerHTML = renderSkeleton(grouped_data);
-            for (let id of expandedIds) {
-                const section = document.getElementById(id);
-                if (section && section.classList.contains('hidden')) {
-                    toggleSection(id);
-                }
-            }
-        }
-        function renderSkeleton(grouped_data) {
-            let html = '';
-            if (grouped_data.type === 'nested') {
-                Object.entries(grouped_data.groups).forEach(([outer, inners]) => {
-                    const outer_id = outer.replace(/\s+/g, '_');
-                    const outer_count = Object.values(inners).reduce((sum, prods) => sum + prods.length, 0);
-                    html += `<div class="group-header group-outer" onclick="toggleSection('${outer_id}')"><span class="toggle" data-toggle="${outer_id}">+</span>${outer} (${outer_count})</div>`;
-                    html += `<div id="${outer_id}" class="hidden">`;
+            const { type, groups } = getGroupedData(group_by, currentProducts);
+            
+            let skeletonHTML = '';
+            if (type === 'nested') {
+                Object.entries(groups).forEach(([outer, inners]) => {
+                    const outerId = `group_${outer.replace(/\W/g, '_')}`;
+                    const outerCount = Object.values(inners).reduce((sum, prods) => sum + prods.length, 0);
+                    skeletonHTML += `<div class="group-header group-outer" onclick="toggleSection('${outerId}')"><span class="toggle" data-toggle="${outerId}">+</span>${outer} (${outerCount})</div><div id="${outerId}" class="hidden">`;
                     Object.entries(inners).forEach(([inner, products]) => {
-                        const inner_id = `${outer_id}_${inner.replace(/\s+/g, '_')}`;
-                        groupedProducts.set(inner_id, products);
-                        html += `<div class="group-header group-inner" onclick="toggleSection('${inner_id}')"><span class="toggle" data-toggle="${inner_id}">+</span>${inner} (${products.length})</div>`;
-                        html += `<div id="${inner_id}" class="product-list hidden"></div>`;
+                        const innerId = `${outerId}_${inner.replace(/\W/g, '_')}`;
+                        groupedProducts.set(innerId, products);
+                        skeletonHTML += `<div class="group-header group-inner" onclick="toggleSection('${innerId}')"><span class="toggle" data-toggle="${innerId}">+</span>${inner} (${products.length})</div><div id="${innerId}" class="product-list hidden"></div>`;
                     });
-                    html += `</div>`;
+                    skeletonHTML += `</div>`;
                 });
-            } else {
-                Object.entries(grouped_data.groups).forEach(([key, products]) => {
-                    const key_id = key.replace(/\s+/g, '_');
-                    groupedProducts.set(key_id, products);
-                    html += `<div class="group-header group-outer" onclick="toggleSection('${key_id}')"><span class="toggle" data-toggle="${key_id}">+</span>${key} (${products.length})</div>`;
-                    html += `<div id="${key_id}" class="product-list hidden"></div>`;
+            } else { // Flat grouping
+                Object.entries(groups).forEach(([key, products]) => {
+                    const keyId = `group_${key.replace(/\W/g, '_')}`;
+                    groupedProducts.set(keyId, products);
+                    skeletonHTML += `<div class="group-header group-outer" onclick="toggleSection('${keyId}')"><span class="toggle" data-toggle="${keyId}">+</span>${key} (${products.length})</div><div id="${keyId}" class="product-list hidden"></div>`;
                 });
             }
-            return html;
+            document.getElementById('nested-list').innerHTML = skeletonHTML;
+            document.getElementById('stats-p').textContent = `Found: ${currentProducts.length.toLocaleString('en-US')} items`;
+
+            expandedIds.forEach(id => {
+                const section = document.getElementById(id);
+                if (section) { toggleSection(id); }
+            });
         }
 
-        // --- UPDATED FUNCTION WITH SIZE SORTING ---
-        async function loadData() {
+        async function loadDataAndRender() {
+            const stats = document.getElementById('stats-p');
+            const progress = document.getElementById('progress-container');
+            
+            stats.textContent = 'Loading...';
+            progress.style.display = 'block';
+
+            const params = new URLSearchParams(window.location.search);
             try {
-                document.getElementById('stats-p').textContent = 'Loading...';
-                document.getElementById('progress-container').style.display = 'block';
-                const response = await fetch('/data');
-                allProducts = await response.json();
-
-                // Define the logical order for standard sizes. Lower numbers appear first.
-                const sizeOrder = {
-                    'XXXS': 1, 'XXS': 2, 'XS': 3, 'S': 4, 'M': 5,
-                    'L': 6, 'XL': 7, 'XXL': 8, 'XXXL': 9
-                };
-
-                allProducts.forEach(p => {
-                    // Price formatting (unchanged)
-                    p.sale_price_str = p.sale_price ? `$${Math.round(p.sale_price).toLocaleString('en-US')}` : '-';
-                    p.original_price_str = p.original_price ? `$${Math.round(p.original_price).toLocaleString('en-US')}` : '-';
-
-                    // --- NEW CUSTOM SIZE SORTING LOGIC ---
-                    p.sizes.sort((a, b) => {
-                        const aIsNum = !isNaN(a);
-                        const bIsNum = !isNaN(b);
-                        const aIsStd = sizeOrder[a] !== undefined;
-                        const bIsStd = sizeOrder[b] !== undefined;
-
-                        // Case 1: Both are numbers (e.g., 8, 10, 42) -> Sort numerically
-                        if (aIsNum && bIsNum) return Number(a) - Number(b);
-
-                        // Case 2: Both are standard sizes (e.g., S, M, XL) -> Sort by predefined order
-                        if (aIsStd && bIsStd) return sizeOrder[a] - sizeOrder[b];
-
-                        // Case 3: One is a number, the other isn't -> Numbers always come first
-                        if (aIsNum && !bIsNum) return -1;
-                        if (!aIsNum && bIsNum) return 1;
-
-                        // Case 4: One is a standard size, the other is not (e.g., 'S' vs 'One Size') -> Standard sizes come first
-                        if (aIsStd && !bIsStd) return -1;
-                        if (!aIsStd && bIsStd) return 1;
-
-                        // Fallback: For any other cases (e.g., 'One Size' vs 'Adjustable'), sort alphabetically
-                        return a.localeCompare(b);
-                    });
-                });
-
-                renderResults();
+                const response = await fetch(`/data?${params.toString()}`);
+                if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+                currentProducts = await response.json();
+                renderUI();
             } catch (error) {
-                document.getElementById('stats-p').textContent = 'Error loading data';
                 console.error("Failed to load data:", error);
+                stats.textContent = 'Error loading data.';
             } finally {
-                document.getElementById('progress-container').style.display = 'none';
+                progress.style.display = 'none';
             }
+        }
+        
+        function handleFormChange() {
+            const form = document.querySelector("form");
+            const params = new URLSearchParams(new FormData(form));
+            history.pushState({}, '', `?${params.toString()}`);
+            loadDataAndRender();
         }
 
         document.addEventListener("DOMContentLoaded", () => {
             const params = new URLSearchParams(window.location.search);
-            document.getElementById('gender').value = params.get('gender') || 'all';
-            document.getElementById('brands').value = params.get('brands') || '';
-            document.getElementById('sizes').value = params.get('sizes') || '';
-            document.getElementById('min_discount').value = params.get('min_discount') || '';
-            document.getElementById('min_price').value = params.get('min_price') || '';
-            document.getElementById('max_price').value = params.get('max_price') || '';
-            document.getElementById('sort_by').value = params.get('sort_by') || 'discount_desc';
-            document.getElementById('group_by').value = params.get('group_by') || 'brand';
-            const numberInputs = [document.getElementById('min_discount'), document.getElementById('min_price'), document.getElementById('max_price')];
-            numberInputs.forEach(input => {
-                input.addEventListener('input', function() {
-                    this.value = this.value.replace(/[^0-9]/g, '');
-                    if (this.id === 'min_discount' && this.value.length > 2) {
-                        this.value = this.value.slice(0, 2);
-                    } else if ((this.id === 'min_price' || this.id === 'max_price') && this.value.length > 5) {
-                        this.value = this.value.slice(0, 5);
-                    }
-                });
+            document.querySelectorAll("form [name]").forEach(el => {
+                if (params.has(el.name)) el.value = params.get(el.name);
             });
-            document.querySelectorAll("input, select").forEach(e => {
-                e.addEventListener("change", handleFormChange);
-            });
-            loadData();
+            document.querySelectorAll("input, select").forEach(e => e.addEventListener("change", handleFormChange));
+            loadDataAndRender();
         });
     </script>
 </head>
 <body>
     <h1>clothing.deals</h1>
-    <form>
+    <form onsubmit="event.preventDefault(); handleFormChange();">
         <div class="filter-group">
-            <div>
-                <label for="gender">Gender</label>
-                <select name="gender" id="gender">
-                    <option value="all">All</option>
-                    <option value="men">Men</option>
-                    <option value="women">Women</option>
-                </select>
-            </div>
-            <div>
-                <label for="group_by">Group By</label>
-                <select name="group_by" id="group_by">
-                    <option value="category_brand">Category > Brand</option>
-                    <option value="brand_category">Brand > Category</option>
-                    <option value="category">Category</option>
-                    <option value="brand">Brand</option>
-                </select>
-            </div>
-            <div>
-                <label for="sort_by">Sort By</label>
-                <select name="sort_by" id="sort_by">
-                    <option value="discount_desc">Discount (High to Low)</option>
-                    <option value="price_asc">Price (Low to High)</option>
-                </select>
-            </div>
+            <div><label for="gender">Gender</label><select name="gender" id="gender"><option value="all">All</option><option value="men">Men</option><option value="women">Women</option></select></div>
+            <div><label for="group_by">Group By</label><select name="group_by" id="group_by"><option value="category_brand">Category > Brand</option><option value="brand_category">Brand > Category</option><option value="category">Category</option><option value="brand">Brand</option></select></div>
+            <div><label for="sort_by">Sort By</label><select name="sort_by" id="sort_by"><option value="discount_desc">Discount (High-Low)</option><option value="price_asc">Price (Low-High)</option></select></div>
         </div>
         <div class="filter-group">
-            <div>
-                <label for="brands">Brands (comma-separated)</label>
-                <input type="text" name="brands" id="brands" value="">
-            </div>
-            <div>
-                <label for="sizes">Sizes (comma-separated)</label>
-                <input type="text" name="sizes" id="sizes" value="">
-            </div>
-            <div>
-                <label for="min_discount">Discount</label>
-                <input type="text" name="min_discount" id="min_discount" value="" maxlength="2">
-            </div>
-            <div>
-                <label for="min_price">Min Price</label>
-                <input type="text" name="min_price" id="min_price" value="" maxlength="5">
-            </div>
-            <div>
-                <label for="max_price">Max Price</label>
-                <input type="text" name="max_price" id="max_price" value="" maxlength="5">
-            </div>
+            <div><label for="brands">Brands (comma)</label><input type="text" name="brands" id="brands"></div>
+            <div><label for="min_discount">Min Discount</label><input type="text" name="min_discount" id="min_discount" maxlength="2"></div>
+        </div>
+        <div class="filter-group">
+            <div><label for="min_price">Min Price</label><input type="text" name="min_price" id="min_price"></div>
+            <div><label for="max_price">Max Price</label><input type="text" name="max_price" id="max_price"></div>
+            <div><label for="sizes">Sizes (comma)</label><input type="text" name="sizes" id="sizes"></div>
         </div>
     </form>
-    <div class="results-header">
-        <h2>Results</h2>
-        <div class="progress-container" id="progress-container">
-            <div class="progress-bar"></div>
-        </div>
-        <p id="stats-p">Loading...</p>
-    </div>
+    <div class="results-header"><h2>Results</h2><div class="progress-container" id="progress-container"><div class="progress-bar"></div></div><p id="stats-p">Loading...</p></div>
     <div class="nested-list" id="nested-list"></div>
 </body>
 </html>
