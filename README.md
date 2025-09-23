@@ -16,6 +16,8 @@ An automated web scraper and interactive front-end designed to find the best clo
 1.  **Clone the repository:**
     ```sh
     git clone https://github.com/dh60/clothing.deals.git
+    ```
+    ```sh
     cd clothing.deals
     ```
 
@@ -23,11 +25,15 @@ An automated web scraper and interactive front-end designed to find the best clo
     -   **macOS/Linux:**
         ```sh
         python3 -m venv venv
+        ```
+        ```sh
         source venv/bin/activate
         ```
     -   **Windows:**
         ```sh
         python -m venv venv
+        ```
+        ```sh
         .\venv\Scripts\activate
         ```
 
