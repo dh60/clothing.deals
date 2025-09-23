@@ -1,6 +1,6 @@
 # clothing.deals
 
-![clothing.deals interface](screenshots/screenshot.png)
+![clothing.deals interface](screenshots/interface.png)
 
 An automated web scraper and interactive front-end designed to find the best clothing sales across multiple retailers. This tool efficiently scrapes hundreds of thousands of products, handles anti-bot measures, and presents the data in a fast and user-friendly interface inspired by [RockAuto](https://www.rockauto.com).
 
@@ -45,6 +45,7 @@ An automated web scraper and interactive front-end designed to find the best clo
 
 
 ## Usage
+![clothing.deals terminal](screenshots/terminal.png)
 
 #### Step 1: Run the Scraper
 
@@ -52,7 +53,7 @@ An automated web scraper and interactive front-end designed to find the best clo
 python ssense.py
 ```
 
--   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then press Enter in the terminal to continue.
+-   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then the script will automatically resume.
 
 #### Step 2: Run the server and view the app.
 
