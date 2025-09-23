@@ -20,9 +20,9 @@ CATEGORY_API_URLS = [
 ]
 PROFILE_DIR = "user_data"
 OUTPUT_JSON_BR = "products.json.br"
-CONCURRENCY = 1000
+CONCURRENCY = 50
 RETRY_DELAY = 8
-MAX_RETRIES = 5
+MAX_RETRIES = 3
 
 ProductData = Dict[str, Any]
 CategoryLookup = Dict[str, Dict[str, Any]]
@@ -59,24 +59,23 @@ async def handle_captcha(api: APIRequestContext, page: Page, solver_lock: asynci
     async with solver_lock:
         async with sem:
             check_resp = await api.get(BASE_URL)
-        if check_resp.status != 403:
-            return
-        logger.warning("CAPTCHA detected! Please solve it in the browser.")
-        captcha_event.clear()
-        await page.bring_to_front()
-        await page.reload()
-        captcha_title = "Access to this page has been denied"
-        while True:
-            try:
-                current_title = await page.title()
-                if captcha_title not in current_title:
-                    logger.info("CAPTCHA appears to be solved.")
-                    break
-                await asyncio.sleep(1)
-            except PlaywrightError as e:
-                logger.warning(f"Error while checking page title: {e}. Retrying check.")
-                await asyncio.sleep(2)
-        captcha_event.set()
+        if check_resp.status != 200:
+            logger.warning("CAPTCHA detected! Please solve it in the browser.")
+            captcha_event.clear()
+            await page.bring_to_front()
+            await page.reload()
+            captcha_title = "Access to this page has been denied"
+            while True:
+                try:
+                    current_title = await page.title()
+                    if captcha_title not in current_title:
+                        logger.info("CAPTCHA appears to be solved.")
+                        break
+                    await asyncio.sleep(1)
+                except PlaywrightError as e:
+                    logger.warning(f"Error while checking page title: {e}. Retrying check.")
+                    await asyncio.sleep(2)
+            captcha_event.set()
 
 async def fetch(url: str, api: APIRequestContext, page: Page, sem: asyncio.Semaphore, solver_lock: asyncio.Lock, captcha_event: asyncio.Event) -> Optional[bytes]:
     retries = 0
@@ -90,7 +89,6 @@ async def fetch(url: str, api: APIRequestContext, page: Page, sem: asyncio.Semap
                 if resp.status == 403:
                     await handle_captcha(api, page, solver_lock, captcha_event, sem)
                     continue
-                logger.warning(f"HTTP {resp.status} for {url}. Retrying...")
             except PlaywrightError as e:
                 logger.warning(f"Network error for {url}: {e}. Retrying...")
         retries += 1
@@ -114,7 +112,6 @@ def parse_sitemap_sync(xml: bytes) -> List[Tuple[str, List[str]]]:
     return items
 
 async def fetch_category_data(api: APIRequestContext, **kwargs) -> Optional[List[Dict]]:
-    logger.info("Fetching category hierarchy from APIs...")
     tasks = [fetch(url, api=api, **kwargs) for url in CATEGORY_API_URLS]
     results = await asyncio.gather(*tasks)
     all_categories = []
@@ -178,24 +175,13 @@ def get_existing_urls_from_json(json_file: str) -> Tuple[Set[str], List[ProductD
         logger.info("No existing product file found or file is invalid. Starting a full scrape.")
         return set(), []
 
-async def sitemap_parser_producer(url: str, product_queue: asyncio.Queue, executor: ThreadPoolExecutor,
-                                existing_url_set: Set[str], live_url_set: Set[str],
-                                pbar_parsing: tqdm, pbar_scraping: tqdm, **kwargs):
+async def parse_sitemap_urls(url: str, executor: ThreadPoolExecutor, **kwargs) -> List[Tuple[str, List[str]]]:
     content = await fetch(url, **kwargs)
     if not content:
-        return
-
+        return []
+    
     loop = asyncio.get_running_loop()
-    items = await loop.run_in_executor(executor, parse_sitemap_sync, content)
-    
-    for url, images in items:
-        live_url_set.add(url)
-        if url not in existing_url_set:
-            await product_queue.put((url, images))
-            pbar_scraping.total += 1
-            pbar_scraping.refresh()
-    
-    pbar_parsing.update(1)
+    return await loop.run_in_executor(executor, parse_sitemap_sync, content)
 
 async def product_consumer(product_queue: asyncio.Queue, results_queue: asyncio.Queue, pbar: tqdm, category_lookup: CategoryLookup, executor: ThreadPoolExecutor, **kwargs):
     loop = asyncio.get_running_loop()
@@ -225,9 +211,6 @@ async def results_collector(results_queue: asyncio.Queue, final_product_list: Li
 async def main():
     setup_logging()
     start_time = time.time()
-
-    results_queue = asyncio.Queue(maxsize=CONCURRENCY * 2)
-    product_queue_to_scrape = asyncio.Queue()
     
     sem = asyncio.Semaphore(CONCURRENCY)
     solver_lock = asyncio.Lock()
@@ -238,7 +221,7 @@ async def main():
     with ThreadPoolExecutor() as executor:
         async with async_playwright() as pw:
             ctx = await pw.chromium.launch_persistent_context(PROFILE_DIR, channel="chrome", headless=False, no_viewport=True)
-            page = ctx.pages[0]
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
             await page.goto(f"{BASE_URL}men")
             api = ctx.request
             shared_kwargs = {"page": page, "sem": sem, "solver_lock": solver_lock, "captcha_event": captcha_event, "api": api}
@@ -250,7 +233,6 @@ async def main():
                     logger.warning("Category data fetch failed. Retrying...")
                     await asyncio.sleep(2)
             category_lookup = build_category_lookup(raw_categories)
-            logger.info("Category hierarchy processed.")
 
             sitemap_content = None
             while not sitemap_content:
@@ -263,39 +245,45 @@ async def main():
             root = await loop.run_in_executor(executor, etree.fromstring, sitemap_content)
             sitemap_urls = root.xpath("//s:loc[contains(text(), 'sitemap_products_list')]/text()", namespaces=NS)
 
-            live_url_set = set()
-            final_product_list = []
+            all_product_urls = []
+            with tqdm(total=len(sitemap_urls), desc="Parsing Sitemaps", unit="sitemap") as pbar_parsing:
+                parsing_tasks = [parse_sitemap_urls(url, executor, **shared_kwargs) for url in sitemap_urls]
+                for future in asyncio.as_completed(parsing_tasks):
+                    result = await future
+                    all_product_urls.extend(result)
+                    pbar_parsing.update(1)
 
-            pbar_scraping = tqdm(total=0, desc="Scraping New Products", unit="item")
-            collector_task = asyncio.create_task(results_collector(results_queue, final_product_list))
-            consumers = [
-                asyncio.create_task(product_consumer(product_queue_to_scrape, results_queue, pbar_scraping, 
-                                                     category_lookup, executor, **shared_kwargs)) 
-                for _ in range(CONCURRENCY)
-            ]
+            live_url_set = {url for url, _ in all_product_urls}
+            urls_to_scrape = [(url, images) for url, images in all_product_urls if url not in existing_url_set]
 
-            pbar_parsing = tqdm(total=len(sitemap_urls), desc="Parsing Sitemaps", unit=" sitemap")
-            producer_tasks = [
-                asyncio.create_task(sitemap_parser_producer(url, product_queue_to_scrape, executor,
-                                                            existing_url_set, live_url_set,
-                                                            pbar_parsing, pbar_scraping, **shared_kwargs))
-                for url in sitemap_urls
-            ]
+            if not urls_to_scrape:
+                logger.info("No new products to scrape.")
+            else:
+                product_queue_to_scrape = asyncio.Queue()
+                for item in urls_to_scrape:
+                    await product_queue_to_scrape.put(item)
+                
+                results_queue = asyncio.Queue(maxsize=CONCURRENCY * 2)
+                final_product_list = []
+                
+                with tqdm(total=len(urls_to_scrape), desc="Scraping New Products", unit="item") as pbar_scraping:
+                    collector_task = asyncio.create_task(results_collector(results_queue, final_product_list))
+                    consumers = [
+                        asyncio.create_task(product_consumer(product_queue_to_scrape, results_queue, pbar_scraping, 
+                                                             category_lookup, executor, **shared_kwargs)) 
+                        for _ in range(CONCURRENCY)
+                    ]
 
-            await asyncio.gather(*producer_tasks)
-            pbar_parsing.close()
+                    await product_queue_to_scrape.join()
 
-            await product_queue_to_scrape.join()
-            pbar_scraping.close()
-
-            for _ in consumers:
-                await product_queue_to_scrape.put(None)
-            await asyncio.gather(*consumers)
+                    for _ in consumers:
+                        await product_queue_to_scrape.put(None)
+                    await asyncio.gather(*consumers)
+                    
+                    await results_queue.join()
+                    await results_queue.put(None)
+                    await collector_task
             
-            await results_queue.join()
-            await results_queue.put(None)
-            await collector_task
-
             logger.info("Filtering stale products from previous run...")
             still_live_existing_products = [p for p in existing_products if p.get('url') in live_url_set]
             final_product_list.extend(still_live_existing_products)
