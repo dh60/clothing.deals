@@ -1,6 +1,7 @@
-patchright
-orjson
 fastapi
 uvicorn
+patchright
 lxml
-tdqm
+orjson
+tqdm
+brotli
