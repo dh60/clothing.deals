@@ -6,9 +6,9 @@ An automated web scraper and interactive front-end designed to find the best clo
 
 ## Key Features
 
--   **High-Performance Scraping**: Built with Python's `asyncio` and `Patchright` to scrape thousands of items concurrently, stealthily, and efficiently.
--   **Intelligent Data Collection**: Optimizes requests by first fetching metadata to determine the exact number of pages and size variations to scrape, minimizing redundant calls.
--   **CAPTCHA Handling**: Opens a browser window when a CAPTCHA is detected, pausing the scrape and allowing the user to solve it manually before seamlessly resuming.
+-   **High-Performance Scraping**: Built with `asyncio` and `Patchright` to scrape thousands of items concurrently, stealthily, and efficiently.
+-   **Efficient Data Collection**: Unlike other scrapers, clothing.deals gets the goods **WITHOUT** loading the website's HTML, directly from the source.
+-   **CAPTCHA Handling**: On the rare occasion a CAPTCHA is detected, clothing.deals pauses to allow the user to solve it, before automatically resuming.
 -   **Dynamic & Responsive Frontend**: A pure JavaScript interface that filters, sorts, and groups data instantly without page reloads.
 
 ## Installation
@@ -48,8 +48,6 @@ An automated web scraper and interactive front-end designed to find the best clo
     ```
 
 
-
-
 ## Usage
 ![clothing.deals terminal](screenshots/terminal.png)
 
@@ -64,7 +62,7 @@ python ssense.py
 #### Step 2: Run the server and view the app.
 
 ```sh
-python app.py
+python run.py
 ```
 
 Then open your browser and go to:
