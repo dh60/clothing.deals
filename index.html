@@ -73,23 +73,12 @@
             padding: .3rem;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            font-size: .85rem;
+            font-size: 0.9rem;
             box-sizing: border-box;
             text-align: center;
+            height: 1.5rem;
         }
-        input#min_discount {
-            width: 3rem;
-        }
-        input#min_price,
-        input#max_price {
-            width: 3rem;
-        }
-        select#group_by {
-            width: 9rem;
-        }
-        select#gender {
-            width: 6rem;
-        }
+        select#gender,
         select#sort_by {
             width: 6rem;
         }
@@ -97,14 +86,12 @@
             width: 9rem;
         }
         input#sizes {
-            width: 5rem;
+            width: 6rem;
         }
-        p#product-count {
-            margin: 0 0 0.3rem 1rem;
-            padding: 0;
-            font-size: .8rem;
-            color: #6c757d;
-            white-space: nowrap;
+        input#min_discount,
+        input#min_price,
+        input#max_price {
+            width: 3rem;
         }
         .group-header {
             cursor: pointer;
@@ -312,25 +299,8 @@
         <form id="filters" onsubmit="return false;">
             <div class="filter-group">
                 <div>
-                    <label for="group_by">Group By</label>
-                    <select id="group_by">
-                        <option value="category">Category</option>
-                        <option value="brand">Brand</option>
-                        <option value="category_brand">Category → Brand</option>
-                        <option value="brand_category">Brand → Category</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="sort_by">Sort By</label>
-                    <select id="sort_by">
-                        <option value="discount">Discount</option>
-                        <option value="price_low">Price</option>
-                    </select>
-                </div>
-                <div>
                     <label for="gender">Gender</label>
                     <select id="gender">
-                        <option value="">Any</option>
                         <option value="men">Men</option>
                         <option value="women">Women</option>
                         <option value="other">Other</option>
@@ -340,33 +310,39 @@
             <div class="filter-group">
                 <div>
                     <label for="brands">Brand</label>
-                    <input type="text" id="brands" placeholder="nike, adidas..." list="brand-list">
+                    <input type="text" id="brands" placeholder="Versace, Gucci..." list="brand-list">
                 </div>
                 <div>
                     <label for="sizes">Size</label>
-                    <input type="text" id="sizes" placeholder="s, m, l...">
+                    <input type="text" id="sizes" placeholder="XS, 32, 8.5...">
                 </div>
             </div>
             <div class="filter-group">
                 <div>
                     <label for="min_price">Min $</label>
-                    <input type="text" id="min_price" placeholder="Any" maxlength="4" pattern="[0-9]*">
+                    <input type="text" id="min_price" maxlength="4" pattern="[0-9]*">
                 </div>
                 <div>
                     <label for="max_price">Max $</label>
-                    <input type="text" id="max_price" placeholder="Any" maxlength="4" pattern="[0-9]*">
+                    <input type="text" id="max_price" maxlength="4" pattern="[0-9]*">
                 </div>
                 <div>
                     <label for="min_discount">Min %</label>
-                    <input type="text" id="min_discount" placeholder="Any" maxlength="2" pattern="[0-9]*">
+                    <input type="text" id="min_discount" maxlength="2" pattern="[0-9]*">
+                </div>
+                <div>
+                    <label for="sort_by">Sort By</label>
+                    <select id="sort_by">
+                        <option value="discount">Discount</option>
+                        <option value="price">Price</option>
+                    </select>
                 </div>
             </div>
-            <p id="product-count"></p>
         </form>
     </header>
     <datalist id="brand-list"></datalist>
     <div id="nested-list"></div>
-        <script>
+    <script>
         let allProducts = [],
             filteredProducts = [],
             groupedData = {};
@@ -376,10 +352,6 @@
         let expandedGroupIds = new Set();
         const CHUNK_SIZE = 50;
         let sectionToCatMap = {};
-
-        function getBrandTitle(p) {
-            return p.brand ? p.brand.charAt(0).toUpperCase() + p.brand.slice(1) : 'Unknown Brand';
-        }
 
         function debounce(func, delay) {
             let timeout;
@@ -415,7 +387,7 @@
 
         const deepGet = (obj, path) => path.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, obj);
 
-        function getGroupedData(group_by, products) {
+        function getGroupedData(products) {
             let groups = {};
             const deepSet = (obj, path, value) => {
                 let schema = obj;
@@ -432,21 +404,13 @@
             };
 
             products.forEach(p => {
-                const brand = getBrandTitle(p);
                 const categoryPath = getCategoryPath(p).split(' > ');
-                let path;
+                deepSet(groups, categoryPath, p);
 
-                if (group_by === 'category_brand') path = [...categoryPath, brand];
-                else if (group_by === 'brand_category') path = [brand, ...categoryPath];
-                else if (group_by === 'category') path = categoryPath;
-                else path = [brand];
-
-                deepSet(groups, path, p);
-
-                if (group_by.startsWith('category') && path.length > 1) {
-                    for (let i = 1; i < path.length; i++) {
-                        const subPath = path.slice(0, i);
-                        if (path[i] !== 'ALL') {
+                if (categoryPath.length > 1) {
+                    for (let i = 1; i < categoryPath.length; i++) {
+                        const subPath = categoryPath.slice(0, i);
+                        if (categoryPath[i] !== 'ALL') {
                             deepSet(groups, [...subPath, 'ALL'], p);
                         }
                     }
@@ -479,6 +443,13 @@
                 tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${formatDescription(description)}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
                 tbody.appendChild(tr);
             });
+        }
+
+        function countProducts(data) {
+            if (Array.isArray(data)) {
+                return data.length;
+            }
+            return Object.values(data).reduce((sum, val) => sum + countProducts(val), 0);
         }
 
         function renderSkeletonUI() {
@@ -518,7 +489,7 @@
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
                         subContainer.appendChild(tableContainer);
                     } else {
-                        const childProductCount = value.ALL ? value.ALL.length : Object.values(value).flat(Infinity).length;
+                        const childProductCount = value.ALL ? value.ALL.length : countProducts(value);
                         const toggleIcon = isExpanded ? '−' : '+';
                         const header = document.createElement('div');
                         header.className = `group-header group-level-${level}`;
@@ -585,7 +556,7 @@
             }
 
             const brands = document.getElementById('brands').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-            const sizesInput = document.getElementById('sizes').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+            const sizesInput = document.getElementById('sizes').value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
             const sizes = sizesInput.map(s => {
                 if (/\d/.test(s) && /[a-zA-Z]/.test(s)) {
                     return s.replace(/[^0-9.]/g, '');
@@ -602,22 +573,28 @@
                 if (p.discount < minDiscount) return false;
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
                 if (brands.length && (!p.brand || !brands.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
-                if (sizes.length && !sizes.some(s => (p.sizes || []).some(ps => ps.toLowerCase().includes(s)))) return false;
+                if (sizes.length && !sizes.some(s => {
+                    const isAlpha = /^[A-Z]+$/i.test(s);
+                    return (p.sizes || []).some(ps => {
+                        if (isAlpha) {
+                            return ps === s;
+                        } else {
+                            return ps.split(/\s+/).some(token => token === s);
+                        }
+                    });
+                })) return false;
                 if (gender === 'other') {
                     if (!p.isGenderless) return false;
-                } else if (gender) {
+                } else {
                     if (p.gender !== gender || p.isGenderless) return false;
                 }
                 return true;
             });
 
-            if (sortBy === 'price_low') filteredProducts.sort((a, b) => a.lowest - b.lowest);
-            else if (sortBy === 'price_high') filteredProducts.sort((a, b) => b.lowest - a.lowest);
+            if (sortBy === 'price') filteredProducts.sort((a, b) => a.lowest - b.lowest);
             else filteredProducts.sort((a, b) => b.discount - a.discount);
 
-            const groupBy = document.getElementById('group_by').value;
-            groupedData = getGroupedData(groupBy, filteredProducts);
-            document.getElementById('product-count').textContent = `${filteredProducts.length} of ${allProducts.length} products shown`;
+            groupedData = getGroupedData(filteredProducts);
 
             renderSkeletonUI();
             setupGroupObserver();
