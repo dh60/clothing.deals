@@ -11,6 +11,26 @@ An automated web scraper and interactive front-end designed to find the best clo
 -   **CAPTCHA Handling**: On the rare occasion a CAPTCHA is detected, clothing.deals pauses to allow the user to solve it, before automatically resuming.
 -   **Dynamic & Responsive Frontend**: A pure JavaScript interface that filters, sorts, and groups data instantly without page reloads.
 
+## Usage
+![clothing.deals terminal](screenshots/terminal.png)
+
+#### Step 1: Run the Scraper
+
+```sh
+python ssense.py
+```
+
+-   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then the script will automatically resume.
+
+#### Step 2: Run the server and view the app.
+
+```sh
+python run.py
+```
+
+Then open your browser and go to:
+[http://localhost:8000](http://localhost:8000)
+
 ## Installation
 
 1.  **Clone the repository:**
@@ -46,24 +66,3 @@ An automated web scraper and interactive front-end designed to find the best clo
     ```sh
     patchright install chrome
     ```
-
-
-## Usage
-![clothing.deals terminal](screenshots/terminal.png)
-
-#### Step 1: Run the Scraper
-
-```sh
-python ssense.py
-```
-
--   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then the script will automatically resume.
-
-#### Step 2: Run the server and view the app.
-
-```sh
-python run.py
-```
-
-Then open your browser and go to:
-[http://localhost:8000](http://localhost:8000)
