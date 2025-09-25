@@ -7,7 +7,7 @@ An automated web scraper and interactive front-end designed to find the best clo
 ## Key Features
 
 -   **High-Performance Scraping**: Built with `asyncio` and `Patchright` to scrape thousands of items concurrently, stealthily, and efficiently.
--   **Efficient Data Collection**: Unlike other scrapers, clothing.deals gets the goods **WITHOUT** loading the website's HTML, directly from the source.
+-   **Efficient Data Collection**: Unlike other scrapers, clothing.deals gets the goods directly from the .json source.
 -   **CAPTCHA Handling**: On the rare occasion a CAPTCHA is detected, clothing.deals pauses to allow the user to solve it, before automatically resuming.
 -   **Dynamic & Responsive Frontend**: A pure JavaScript interface that filters, sorts, and groups data instantly without page reloads.
 
