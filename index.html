@@ -1,387 +1,786 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>clothing.deals</title>
-<style>
-    /* Final Styles */
-    :root { --bg-color:#fff; --text-color:#333; --accent-color:#07f; --border-color:#dee2e6; --stripe-color:#f8f9fa; --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; --progress-bg:#e9ecef; --progress-bar:#007bff; --nested-border-color:#e9ecef; }
-    body { font-family:var(--font-sans); background-color:var(--bg-color); color:var(--text-color); margin:0; line-height:1.2; font-size:.85rem; }
-    .site-header { position:sticky; top:0; z-index:100; background-color:var(--bg-color); padding:0; box-shadow:0 2px 5px rgba(0,0,0,0.05); }
-    h1 { font-size:1.5rem; font-weight:400; margin:0 0 .5rem; text-align:center; padding-top: .5rem; }
-    form { display:flex; flex-wrap:wrap; gap:.5rem; margin-bottom:.5rem; padding:.5rem; background:var(--stripe-color); border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.1); align-items:flex-end; justify-content:center; }
-    .filter-group { display:flex; flex-wrap:nowrap; gap:.25rem; align-items:flex-end; }
-    form > div { flex:0 0 auto; min-width:0; }
-    label { display:block; font-size:.75rem; margin-bottom:.1rem; color:#495057; text-align:center; }
-    input, select { padding:.3rem; border:1px solid var(--border-color); border-radius:4px; font-size:.85rem; box-sizing:border-box; text-align:center; }
-    input#min_discount { width:3rem; }
-    input#min_price, input#max_price { width:3rem; }
-    select#group_by { width:9rem; }
-    select#gender { width:6rem; }
-    select#sort_by { width:6rem; }
-    input#brands { width:9rem; }
-    input#sizes { width:5rem; }
-    p#product-count { margin:0 0 0.3rem 1rem; padding:0; font-size:.8rem; color:#6c757d; white-space:nowrap; }
-    .group-header { cursor:pointer; padding:.3rem .5rem; margin:0; display:flex; align-items:center; border-bottom:1px solid var(--border-color); }
-    .group-header:hover { background:#e9ecef; }
-    .group-header .toggle { width:.8rem; height:.8rem; margin-right:.4rem; font-size:.7rem; text-align:center; line-height:.8rem; }
-    .group-level-0 { font-weight:600; background:var(--stripe-color); }
-    .group-level-1 { font-weight:500; background:#fff; margin-left:1.5rem; }
-    .group-level-2 { font-weight:400; background:var(--stripe-color); margin-left:3rem; }
-    .group-level-3 { font-weight:400; background:#fff; margin-left:4.5rem; }
-    .product-list { margin-left:4.5rem; padding-left:.5rem; border-left:2px solid var(--nested-border-color); }
-    table { border-collapse:collapse; font-size:.8rem; width:100%; table-layout:auto; }
-    th, td { padding:.2rem .3rem; text-align:left; border-bottom:1px solid var(--border-color); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle; }
-    th { background:var(--stripe-color); font-weight:600; position:sticky; top:0; z-index:1; text-align:left; }
-    td.discount { text-align:center; font-weight:700; width:60px; }
-    tr:nth-child(even) { background:var(--stripe-color); }
-    tr:hover { background:#e9ecef; }
-    .spacer { width:auto; padding:0; }
-    a { color:var(--accent-color); text-decoration:none; }
-    a:hover { text-decoration:underline; }
-    .hidden { display:none; }
-    .progress-container { width:100%; max-width:400px; height:4px; background:var(--progress-bg); border-radius:2px; margin:.5rem auto; overflow:hidden; display:none; }
-    .progress-bar { width:100%; height:100%; background:var(--progress-bar); animation:indeterminate 1.5s linear infinite; }
-    @keyframes indeterminate { 0% { transform:translateX(-100%); } 100% { transform:translateX(100%); } }
-    td.image-cell { width: 85px; height: 84px; padding: 2px; position: relative; overflow: visible; }
-    .image-wrapper { position:relative; height:80px; width:80px; }
-    .product-thumbnail { width:80px; height:80px; object-fit:contain; cursor:pointer; display:block; border-radius:3px; background-color: transparent; }
-    .lazy-image-placeholder { width:80px; height:80px; border-radius:3px; background-color: transparent; }
-    td.description-cell { max-width: 250px; white-space: normal; }
-    .description-content { max-height: 3.6em; /* Approx 3 lines based on line-height */ overflow: hidden; }
-    .image-wrapper.expanded { position: absolute; top: 50%; left: 0; transform: translateY(-50%); width: auto; height: auto; z-index: 10; }
-    .image-wrapper.expanded .product-thumbnail { width: auto; height: auto; max-width: 80vw; max-height: 80vh; border: 2px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.4); background-color: var(--bg-color); }
-    .image-nav-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 11; background-color: rgba(0, 0, 0, 0.5); color: white; border: none; padding: 10px 8px; cursor: pointer; font-size: 18px; font-weight: bold; border-radius: 4px; }
-    .image-nav-arrow:hover { background-color: rgba(0, 0, 0, 0.8); }
-    .image-nav-arrow.left { left: 5px; }
-    .image-nav-arrow.right { right: 5px; }
-    .load-sentinel { height: 40px; } /* Invisible trigger for infinite scroll */
-</style>
-<script>
-    let allProducts = [], filteredProducts = [], groupedData = {};
-    let isInitialLoad = true, groupObserver, sentinelObserver;
-    let expandedGroupIds = new Set();
-    const CHUNK_SIZE = 50;
-
-    function getBrandTitle(p) { return p.brand ? p.brand.charAt(0).toUpperCase() + p.brand.slice(1) : 'Unknown Brand'; }
-    function debounce(func, delay) { let timeout; return (...args) => { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
-    function toggleSection(id) { const el = document.getElementById(id); if (!el) return; const isHidden = el.classList.toggle('hidden'); const toggleIcon = document.querySelector(`[data-toggle="${id}"]`); if (toggleIcon) toggleIcon.textContent = isHidden ? '+' : '−'; }
-    function formatDescription(text) { if (!text) return ''; return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-    function getCategoryPath(p) { return p.category || 'Unknown Category'; }
-    const deepGet = (obj, path) => path.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, obj);
-
-    function getGroupedData(group_by, products) {
-        let groups = {};
-        const deepSet = (obj, path, value) => {
-            let schema = obj;
-            for (let i = 0; i < path.length; i++) {
-                const segment = path[i];
-                if (!schema[segment]) {
-                    schema[segment] = i === path.length - 1 ? [] : {};
-                }
-                if (Array.isArray(schema[segment]) && i < path.length - 1) return;
-                if (typeof schema[segment] === 'object' && !Array.isArray(schema[segment]) && i === path.length - 1) return;
-                schema = schema[segment];
-            }
-            schema.push(value);
-        };
-
-        products.forEach(p => {
-            const brand = getBrandTitle(p);
-            const categoryPath = getCategoryPath(p).split(' → ');
-            let path;
-
-            if (group_by === 'category_brand') path = [...categoryPath, brand];
-            else if (group_by === 'brand_category') path = [brand, ...categoryPath];
-            else if (group_by === 'category') path = categoryPath;
-            else path = [brand];
-
-            deepSet(groups, path, p);
-
-            if (group_by.startsWith('category') && path.length > 1) {
-                for (let i = 1; i < path.length; i++) {
-                    const subPath = path.slice(0, i);
-                    if (path[i] !== 'ALL') {
-                       deepSet(groups, [...subPath, 'ALL'], p);
-                    }
-                }
-            }
-        });
-        
-        const sortKeys = (obj) => { if (Array.isArray(obj)) return obj; const sorted = {}; Object.keys(obj).sort((a, b) => a.localeCompare(b)).forEach(key => { sorted[key] = sortKeys(obj[key]); }); return sorted; };
-        return sortKeys(groups);
-    }
-
-    function appendTableRows(tbody, products, startIndex, count) {
-        const productsToShow = products.slice(startIndex, startIndex + count);
-        productsToShow.forEach(p => {
-            const tr = document.createElement('tr');
-            const hue = Math.min(p.discount / 90, 1) * 120;
-            const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
-            const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
-            const brand = p.brand || 'N/A';
-            const imageUrl = p.images && p.images.length > 0 ? p.images[0] : '';
-            const description = p.description || '';
-            const imageWrapperData = `data-images='${JSON.stringify(p.images || [])}' data-current-index="0"`;
-            const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
-            tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${formatDescription(description)}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
-            tbody.appendChild(tr);
-        });
-    }
-
-    function renderSkeletonUI() {
-        const container = document.getElementById('nested-list');
-        container.innerHTML = '';
-        if (Object.keys(groupedData).length === 0) { container.innerHTML = '<p style="text-align:center; padding: 2rem;">No products match your criteria.</p>'; return; }
-        
-        const renderLevel = (subContainer, data, level, pathPrefix) => {
-            const sortedKeys = Object.keys(data);
-            if (sortedKeys.includes('ALL')) {
-                sortedKeys.sort((a, b) => {
-                    if (a === 'ALL') return -1;
-                    if (b === 'ALL') return 1;
-                    return a.localeCompare(b);
-                });
-            }
-
-            sortedKeys.forEach(key => {
-                const value = data[key];
-                const currentPathArray = [...pathPrefix, key];
-                const groupId = 'group_' + btoa(JSON.stringify(currentPathArray));
-                const isExpanded = expandedGroupIds.has(groupId);
-
-                if (Array.isArray(value)) {
-                    const toggleIcon = isExpanded ? '−' : '+';
-                    const header = document.createElement('div');
-                    header.className = `group-header group-level-${level}`;
-                    header.onclick = () => toggleSection(groupId);
-                    header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${value.length})`;
-                    subContainer.appendChild(header);
-                    const tableContainer = document.createElement('div');
-                    tableContainer.id = groupId;
-                    tableContainer.className = `product-list lazy-load-group ${isExpanded ? '' : 'hidden'}`;
-                    tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
-                    subContainer.appendChild(tableContainer);
-                } else {
-                    const childProductCount = value.ALL ? value.ALL.length : Object.values(value).flat(Infinity).length;
-                    const toggleIcon = isExpanded ? '−' : '+';
-                    const header = document.createElement('div');
-                    header.className = `group-header group-level-${level}`;
-                    header.onclick = () => toggleSection(groupId);
-                    header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${childProductCount})`;
-                    subContainer.appendChild(header);
-                    const innerContainer = document.createElement('div');
-                    innerContainer.id = groupId;
-                    innerContainer.className = isExpanded ? '' : 'hidden';
-                    subContainer.appendChild(innerContainer);
-                    renderLevel(innerContainer, value, level + 1, currentPathArray);
-                }
-            });
-        };
-        renderLevel(container, groupedData, 0, []);
-    }
-
-    function setupGroupObserver() {
-        if (groupObserver) groupObserver.disconnect();
-        const groupsToLoad = document.querySelectorAll('.lazy-load-group');
-        if (groupsToLoad.length === 0) return;
-        
-        groupObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const container = entry.target;
-                    const groupKeyPath = JSON.parse(container.dataset.groupKey);
-                    const products = deepGet(groupedData, groupKeyPath);
-
-                    if (products) {
-                        const table = document.createElement('table');
-                        table.innerHTML = '<thead><tr><th class="image">Image</th><th style="width: 60px;">Discount</th><th>Product</th><th style="width: 120px;">Brand</th><th>Description</th><th style="width: 100px;">Sizes</th><th style="width: 60px;">Sale</th><th style="width: 60px;">Original</th><th class="spacer"></th></tr></thead>';
-                        const tbody = document.createElement('tbody');
-                        table.appendChild(tbody);
-                        
-                        appendTableRows(tbody, products, 0, CHUNK_SIZE);
-                        container.appendChild(table);
-
-                        if (products.length > CHUNK_SIZE) {
-                            const sentinel = document.createElement('div');
-                            sentinel.className = 'load-sentinel';
-                            sentinel.dataset.groupKey = container.dataset.groupKey;
-                            sentinel.dataset.nextIndex = CHUNK_SIZE;
-                            container.appendChild(sentinel);
-                            sentinelObserver.observe(sentinel);
-                        }
-                    }
-                    container.classList.remove('lazy-load-group');
-                    observer.unobserve(container);
-                }
-            });
-        }, { rootMargin: '200px' });
-        groupsToLoad.forEach(group => groupObserver.observe(group));
-    }
-
-    function applyFiltersAndRender() {
-        if (isInitialLoad) {
-            expandedGroupIds.clear();
-        } else {
-            expandedGroupIds.clear();
-            document.querySelectorAll('[id^="group_"]:not(.hidden)').forEach(el => expandedGroupIds.add(el.id));
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>clothing.deals</title>
+    <style>
+        :root {
+            --bg-color: #fff;
+            --text-color: #333;
+            --accent-color: #07f;
+            --border-color: #dee2e6;
+            --stripe-color: #f8f9fa;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --progress-bg: #e9ecef;
+            --progress-bar: #007bff;
+            --nested-border-color: #e9ecef;
         }
-
-        const brands = document.getElementById('brands').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-        const sizes = document.getElementById('sizes').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-        const gender = document.getElementById('gender').value;
-        const sortBy = document.getElementById('sort_by').value;
-        const minDiscount = parseFloat(document.getElementById('min_discount').value) || 0;
-        const minPrice = parseFloat(document.getElementById('min_price').value) || 0;
-        const maxPrice = parseFloat(document.getElementById('max_price').value) || Infinity;
-
-        filteredProducts = allProducts.filter(p => {
-            if (p.discount < minDiscount) return false;
-            if (p.lowest < minPrice || p.lowest > maxPrice) return false;
-            if (brands.length && (!p.brand || !brands.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
-            if (sizes.length && !sizes.some(s => (p.sizes || []).some(ps => ps.toLowerCase() === s))) return false;
-            if (gender === 'unisex') { if (!p.is_genderless) return false; } 
-            else if (gender) { if (p.gender !== gender || p.is_genderless) return false; }
-            return true;
-        });
-
-        if (sortBy === 'price_low') filteredProducts.sort((a, b) => a.lowest - b.lowest);
-        else if (sortBy === 'price_high') filteredProducts.sort((a, b) => b.lowest - a.lowest);
-        else filteredProducts.sort((a, b) => b.discount - a.discount);
-
-        const groupBy = document.getElementById('group_by').value;
-        groupedData = getGroupedData(groupBy, filteredProducts);
-        document.getElementById('product-count').textContent = `${filteredProducts.length} of ${allProducts.length} products shown`;
-        
-        renderSkeletonUI();
-        setupGroupObserver();
-        
-        isInitialLoad = false;
-    }
-
-    async function initialDataFetch() {
-        document.getElementById('progress-container').style.display = 'block';
-        try {
-            const response = await fetch('/products.json.br');
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            allProducts = await response.json();
-            const brandList = document.getElementById('brand-list');
-            const uniqueBrands = [...new Set(allProducts.map(p => p.brand))].sort();
-            uniqueBrands.forEach(brand => { const option = document.createElement('option'); option.value = brand; brandList.appendChild(option); });
-            applyFiltersAndRender();
-        } catch (error) {
-            console.error('Failed to fetch product data:', error);
-            document.getElementById('nested-list').innerHTML = '<p style="text-align: center; color: red; padding: 2rem;">Error loading data. Please try again.</p>';
-        } finally {
-            document.getElementById('progress-container').style.display = 'none';
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            line-height: 1.2;
+            font-size: .85rem;
         }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const debouncedApplyFilters = debounce(applyFiltersAndRender, 350);
-        document.querySelectorAll('#filters select, #filters input').forEach(el => {
-            el.addEventListener('change', applyFiltersAndRender);
-            el.addEventListener('input', debouncedApplyFilters);
-        });
-
-        sentinelObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const sentinel = entry.target;
-                    const groupKeyPath = JSON.parse(sentinel.dataset.groupKey);
-                    const nextIndex = parseInt(sentinel.dataset.nextIndex, 10);
-                    const products = deepGet(groupedData, groupKeyPath);
-                    const table = sentinel.previousElementSibling;
-                    const tbody = table.querySelector('tbody');
-
-                    if (products && tbody) {
-                        appendTableRows(tbody, products, nextIndex, CHUNK_SIZE);
-                        const newNextIndex = nextIndex + CHUNK_SIZE;
-
-                        if (newNextIndex >= products.length) {
-                            observer.unobserve(sentinel);
-                            sentinel.remove();
-                        } else {
-                            sentinel.dataset.nextIndex = newNextIndex;
-                        }
-                    }
-                }
-            });
-        }, { rootMargin: '400px' });
-        
-        document.getElementById('nested-list').addEventListener('click', e => {
-            if (e.target.classList.contains('product-thumbnail')) {
-                const clickedWrapper = e.target.parentElement;
-                const isExpanding = !clickedWrapper.classList.contains('expanded');
-                const previouslyExpandedWrapper = document.querySelector('.image-wrapper.expanded');
-                
-                if (previouslyExpandedWrapper) {
-                    previouslyExpandedWrapper.classList.remove('expanded');
-                    previouslyExpandedWrapper.style.transform = ''; // Clear adjustments
-                    manageImageNav(previouslyExpandedWrapper, false);
-                }
-
-                if (isExpanding && clickedWrapper !== previouslyExpandedWrapper) {
-                    clickedWrapper.classList.add('expanded');
-                    manageImageNav(clickedWrapper, true);
-                    
-                    requestAnimationFrame(() => {
-                        const header = document.querySelector('.site-header');
-                        const headerHeight = header ? header.getBoundingClientRect().height : 0;
-                        const rect = clickedWrapper.getBoundingClientRect();
-                        const viewportHeight = window.innerHeight;
-                        let adjustment = 0;
-                        const margin = 10;
-
-                        if (rect.top < headerHeight + margin) {
-                            adjustment = (headerHeight + margin) - rect.top;
-                        } else if (rect.bottom > viewportHeight - margin) {
-                            adjustment = (viewportHeight - margin) - rect.bottom;
-                        }
-
-                        if (adjustment !== 0) {
-                            clickedWrapper.style.transform = `translateY(-50%) translateY(${adjustment}px)`;
-                        }
-                    });
-
-                } else if (!isExpanding) {
-                    const thumbnail = clickedWrapper.querySelector('.product-thumbnail');
-                    const images = JSON.parse(clickedWrapper.dataset.images || '[]');
-                    if (images.length > 0) { thumbnail.src = images[0]; clickedWrapper.dataset.currentIndex = "0"; }
-                }
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: var(--bg-color);
+            padding: 0;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin: 0 0 .5rem;
+            text-align: center;
+            padding-top: .5rem;
+        }
+        form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-bottom: .5rem;
+            padding: .5rem;
+            background: var(--stripe-color);
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .filter-group {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: .25rem;
+            align-items: flex-end;
+        }
+        form > div {
+            flex: 0 0 auto;
+            min-width: 0;
+        }
+        label {
+            display: block;
+            font-size: .75rem;
+            margin-bottom: .1rem;
+            color: #495057;
+            text-align: center;
+        }
+        input,
+        select {
+            padding: .3rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: .85rem;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        input#min_discount {
+            width: 3rem;
+        }
+        input#min_price,
+        input#max_price {
+            width: 3rem;
+        }
+        select#group_by {
+            width: 9rem;
+        }
+        select#gender {
+            width: 6rem;
+        }
+        select#sort_by {
+            width: 6rem;
+        }
+        input#brands {
+            width: 9rem;
+        }
+        input#sizes {
+            width: 5rem;
+        }
+        p#product-count {
+            margin: 0 0 0.3rem 1rem;
+            padding: 0;
+            font-size: .8rem;
+            color: #6c757d;
+            white-space: nowrap;
+        }
+        .group-header {
+            cursor: pointer;
+            padding: .3rem .5rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .group-header:hover {
+            background: #e9ecef;
+        }
+        .group-header .toggle {
+            width: .8rem;
+            height: .8rem;
+            margin-right: .4rem;
+            font-size: .7rem;
+            text-align: center;
+            line-height: .8rem;
+        }
+        .group-level-0 {
+            font-weight: 600;
+            background: var(--stripe-color);
+        }
+        .group-level-1 {
+            font-weight: 500;
+            background: #fff;
+            margin-left: 1.5rem;
+        }
+        .group-level-2 {
+            font-weight: 400;
+            background: var(--stripe-color);
+            margin-left: 3rem;
+        }
+        .group-level-3 {
+            font-weight: 400;
+            background: #fff;
+            margin-left: 4.5rem;
+        }
+        .product-list {
+            margin-left: 4.5rem;
+            padding-left: .5rem;
+            border-left: 2px solid var(--nested-border-color);
+        }
+        table {
+            border-collapse: collapse;
+            font-size: .8rem;
+            width: 100%;
+            table-layout: auto;
+        }
+        th,
+        td {
+            padding: .2rem .3rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        th {
+            background: var(--stripe-color);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            text-align: left;
+        }
+        td.discount {
+            text-align: center;
+            font-weight: 700;
+            width: 60px;
+        }
+        tr:nth-child(even) {
+            background: var(--stripe-color);
+        }
+        tr:hover {
+            background: #e9ecef;
+        }
+        .spacer {
+            width: auto;
+            padding: 0;
+        }
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .hidden {
+            display: none;
+        }
+        .progress-container {
+            width: 100%;
+            max-width: 400px;
+            height: 4px;
+            background: var(--progress-bg);
+            border-radius: 2px;
+            margin: .5rem auto;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 100%;
+            background: var(--progress-bar);
+            animation: indeterminate 1.5s linear infinite;
+        }
+        @keyframes indeterminate {
+            0% {
+                transform: translateX(-100%);
             }
-        });
-
-        initialDataFetch();
-    });
-
-    function manageImageNav(wrapper, shouldShow) { wrapper.querySelectorAll('.image-nav-arrow').forEach(arrow => arrow.remove()); if (!shouldShow) return; const images = JSON.parse(wrapper.dataset.images || '[]'); if (images.length <= 1) return; const createArrow = (direction) => { const arrow = document.createElement('button'); arrow.className = `image-nav-arrow ${direction}`; arrow.innerHTML = direction === 'left' ? '&#10094;' : '&#10095;'; arrow.onclick = (e) => { e.stopPropagation(); let currentIndex = parseInt(wrapper.dataset.currentIndex, 10); const totalImages = images.length; currentIndex = (direction === 'left') ? (currentIndex - 1 + totalImages) % totalImages : (currentIndex + 1) % totalImages; wrapper.dataset.currentIndex = currentIndex; wrapper.querySelector('img.product-thumbnail').src = images[currentIndex]; }; wrapper.appendChild(arrow); }; createArrow('left'); createArrow('right'); }
-</script>
+            100% {
+                transform: translateX(100%);
+            }
+        }
+        td.image-cell {
+            width: 85px;
+            height: 84px;
+            padding: 2px;
+            position: relative;
+            overflow: visible;
+        }
+        .image-wrapper {
+            position: relative;
+            height: 80px;
+            width: 80px;
+        }
+        .product-thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            cursor: pointer;
+            display: block;
+            border-radius: 3px;
+            background-color: transparent;
+        }
+        .lazy-image-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 3px;
+            background-color: transparent;
+        }
+        td.description-cell {
+            max-width: 250px;
+            white-space: normal;
+        }
+        .description-content {
+            max-height: 3.6em;
+            overflow: hidden;
+        }
+        .image-wrapper.expanded {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            width: auto;
+            height: auto;
+            z-index: 10;
+        }
+        .image-wrapper.expanded .product-thumbnail {
+            width: auto;
+            height: auto;
+            max-width: 80vw;
+            max-height: 80vh;
+            border: 2px solid white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            background-color: var(--bg-color);
+        }
+        .image-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 11;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .image-nav-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .image-nav-arrow.left {
+            left: 5px;
+        }
+        .image-nav-arrow.right {
+            right: 5px;
+        }
+        .load-sentinel {
+            height: 50px;
+        }
+    </style>
 </head>
 <body>
     <header class="site-header">
         <h1>clothing.deals</h1>
-        <div class="progress-container" id="progress-container"><div class="progress-bar"></div></div>
+        <div class="progress-container" id="progress-container">
+            <div class="progress-bar"></div>
+        </div>
         <form id="filters" onsubmit="return false;">
             <div class="filter-group">
-                <div><label for="group_by">Group By</label><select id="group_by"><option value="category">Category</option><option value="brand">Brand</option><option value="category_brand">Category → Brand</option><option value="brand_category">Brand → Category</option></select></div>
-                <div><label for="sort_by">Sort By</label><select id="sort_by"><option value="discount">Discount</option><option value="price_low">Price</option></select></div>
-                <div><label for="gender">Gender</label><select id="gender"><option value="">Any</option><option value="men">Men</option><option value="women">Women</option><option value="unisex">Other</option></select></div>
+                <div>
+                    <label for="group_by">Group By</label>
+                    <select id="group_by">
+                        <option value="category">Category</option>
+                        <option value="brand">Brand</option>
+                        <option value="category_brand">Category → Brand</option>
+                        <option value="brand_category">Brand → Category</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="sort_by">Sort By</label>
+                    <select id="sort_by">
+                        <option value="discount">Discount</option>
+                        <option value="price_low">Price</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="gender">Gender</label>
+                    <select id="gender">
+                        <option value="">Any</option>
+                        <option value="men">Men</option>
+                        <option value="women">Women</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
             </div>
             <div class="filter-group">
-                <div><label for="brands">Brand</label><input type="text" id="brands" placeholder="nike, adidas..." list="brand-list"></div>
-                <div><label for="sizes">Size</label><input type="text" id="sizes" placeholder="s, m, l..."></div>
+                <div>
+                    <label for="brands">Brand</label>
+                    <input type="text" id="brands" placeholder="nike, adidas..." list="brand-list">
+                </div>
+                <div>
+                    <label for="sizes">Size</label>
+                    <input type="text" id="sizes" placeholder="s, m, l...">
+                </div>
             </div>
             <div class="filter-group">
-                <div><label for="min_price">Min $</label><input type="text" id="min_price" placeholder="Any" maxlength="4" pattern="[0-9]*"></div>
-                <div><label for="max_price">Max $</label><input type="text" id="max_price" placeholder="Any" maxlength="4" pattern="[0-9]*"></div>
-                <div><label for="min_discount">Min %</label><input type="text" id="min_discount" placeholder="Any" maxlength="2" pattern="[0-9]*"></div>
+                <div>
+                    <label for="min_price">Min $</label>
+                    <input type="text" id="min_price" placeholder="Any" maxlength="4" pattern="[0-9]*">
+                </div>
+                <div>
+                    <label for="max_price">Max $</label>
+                    <input type="text" id="max_price" placeholder="Any" maxlength="4" pattern="[0-9]*">
+                </div>
+                <div>
+                    <label for="min_discount">Min %</label>
+                    <input type="text" id="min_discount" placeholder="Any" maxlength="2" pattern="[0-9]*">
+                </div>
             </div>
             <p id="product-count"></p>
         </form>
     </header>
     <datalist id="brand-list"></datalist>
     <div id="nested-list"></div>
+        <script>
+        let allProducts = [],
+            filteredProducts = [],
+            groupedData = {};
+        let isInitialLoad = true,
+            groupObserver,
+            sentinelObserver;
+        let expandedGroupIds = new Set();
+        const CHUNK_SIZE = 50;
+        let sectionToCatMap = {};
+
+        function getBrandTitle(p) {
+            return p.brand ? p.brand.charAt(0).toUpperCase() + p.brand.slice(1) : 'Unknown Brand';
+        }
+
+        function debounce(func, delay) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        function toggleSection(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isHidden = el.classList.toggle('hidden');
+            const toggleIcon = document.querySelector(`[data-toggle="${id}"]`);
+            if (toggleIcon) toggleIcon.textContent = isHidden ? '+' : '−';
+        }
+
+        function formatDescription(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function getCategoryPath(p) {
+            const section = p.isGenderless ? 'everything-else' : p.gender;
+            const catMap = sectionToCatMap[section];
+            if (!catMap) return 'Unknown';
+            const names = p.allCategoryIds.map(id => {
+                const cat = catMap[Number(id)];
+                return cat ? cat.name : 'Unknown';
+            });
+            return names.join(' > ') || 'Uncategorized';
+        }
+
+        const deepGet = (obj, path) => path.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, obj);
+
+        function getGroupedData(group_by, products) {
+            let groups = {};
+            const deepSet = (obj, path, value) => {
+                let schema = obj;
+                for (let i = 0; i < path.length; i++) {
+                    const segment = path[i];
+                    if (!schema[segment]) {
+                        schema[segment] = i === path.length - 1 ? [] : {};
+                    }
+                    if (Array.isArray(schema[segment]) && i < path.length - 1) return;
+                    if (typeof schema[segment] === 'object' && !Array.isArray(schema[segment]) && i === path.length - 1) return;
+                    schema = schema[segment];
+                }
+                schema.push(value);
+            };
+
+            products.forEach(p => {
+                const brand = getBrandTitle(p);
+                const categoryPath = getCategoryPath(p).split(' > ');
+                let path;
+
+                if (group_by === 'category_brand') path = [...categoryPath, brand];
+                else if (group_by === 'brand_category') path = [brand, ...categoryPath];
+                else if (group_by === 'category') path = categoryPath;
+                else path = [brand];
+
+                deepSet(groups, path, p);
+
+                if (group_by.startsWith('category') && path.length > 1) {
+                    for (let i = 1; i < path.length; i++) {
+                        const subPath = path.slice(0, i);
+                        if (path[i] !== 'ALL') {
+                            deepSet(groups, [...subPath, 'ALL'], p);
+                        }
+                    }
+                }
+            });
+
+            const sortKeys = (obj) => {
+                if (Array.isArray(obj)) return obj;
+                const sorted = {};
+                Object.keys(obj).sort((a, b) => a.localeCompare(b)).forEach(key => {
+                    sorted[key] = sortKeys(obj[key]);
+                });
+                return sorted;
+            };
+            return sortKeys(groups);
+        }
+
+        function appendTableRows(tbody, products, startIndex, count) {
+            const productsToShow = products.slice(startIndex, startIndex + count);
+            productsToShow.forEach(p => {
+                const tr = document.createElement('tr');
+                const hue = Math.min(p.discount / 90, 1) * 120;
+                const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
+                const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
+                const brand = p.brand || 'N/A';
+                const imageUrl = p.images && p.images.length > 0 ? p.images[0] : '';
+                const description = p.description || '';
+                const imageWrapperData = `data-images='${JSON.stringify(p.images || [])}' data-current-index="0"`;
+                const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
+                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${formatDescription(description)}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderSkeletonUI() {
+            const container = document.getElementById('nested-list');
+            container.innerHTML = '';
+            if (Object.keys(groupedData).length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 2rem;">No products match your criteria.</p>';
+                return;
+            }
+
+            const renderLevel = (subContainer, data, level, pathPrefix) => {
+                const sortedKeys = Object.keys(data);
+                if (sortedKeys.includes('ALL')) {
+                    sortedKeys.sort((a, b) => {
+                        if (a === 'ALL') return -1;
+                        if (b === 'ALL') return 1;
+                        return a.localeCompare(b);
+                    });
+                }
+
+                sortedKeys.forEach(key => {
+                    const value = data[key];
+                    const currentPathArray = [...pathPrefix, key];
+                    const groupId = 'group_' + btoa(JSON.stringify(currentPathArray));
+                    const isExpanded = expandedGroupIds.has(groupId);
+
+                    if (Array.isArray(value)) {
+                        const toggleIcon = isExpanded ? '−' : '+';
+                        const header = document.createElement('div');
+                        header.className = `group-header group-level-${level}`;
+                        header.onclick = () => toggleSection(groupId);
+                        header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${value.length})`;
+                        subContainer.appendChild(header);
+                        const tableContainer = document.createElement('div');
+                        tableContainer.id = groupId;
+                        tableContainer.className = `product-list lazy-load-group ${isExpanded ? '' : 'hidden'}`;
+                        tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
+                        subContainer.appendChild(tableContainer);
+                    } else {
+                        const childProductCount = value.ALL ? value.ALL.length : Object.values(value).flat(Infinity).length;
+                        const toggleIcon = isExpanded ? '−' : '+';
+                        const header = document.createElement('div');
+                        header.className = `group-header group-level-${level}`;
+                        header.onclick = () => toggleSection(groupId);
+                        header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${childProductCount})`;
+                        subContainer.appendChild(header);
+                        const innerContainer = document.createElement('div');
+                        innerContainer.id = groupId;
+                        innerContainer.className = isExpanded ? '' : 'hidden';
+                        subContainer.appendChild(innerContainer);
+                        renderLevel(innerContainer, value, level + 1, currentPathArray);
+                    }
+                });
+            };
+            renderLevel(container, groupedData, 0, []);
+        }
+
+        function setupGroupObserver() {
+            if (groupObserver) groupObserver.disconnect();
+            const groupsToLoad = document.querySelectorAll('.lazy-load-group');
+            if (groupsToLoad.length === 0) return;
+
+            groupObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const container = entry.target;
+                        const groupKeyPath = JSON.parse(container.dataset.groupKey);
+                        const products = deepGet(groupedData, groupKeyPath);
+
+                        if (products) {
+                            const table = document.createElement('table');
+                            table.innerHTML = '<thead><tr><th class="image">Image</th><th style="width: 60px;">Discount</th><th>Product</th><th style="width: 120px;">Brand</th><th>Description</th><th style="width: 100px;">Sizes</th><th style="width: 60px;">Sale</th><th style="width: 60px;">Original</th><th class="spacer"></th></tr></thead>';
+                            const tbody = document.createElement('tbody');
+                            table.appendChild(tbody);
+
+                            appendTableRows(tbody, products, 0, CHUNK_SIZE);
+                            container.appendChild(table);
+
+                            if (products.length > CHUNK_SIZE) {
+                                const sentinel = document.createElement('div');
+                                sentinel.className = 'load-sentinel';
+                                sentinel.dataset.groupKey = container.dataset.groupKey;
+                                sentinel.dataset.nextIndex = CHUNK_SIZE;
+                                container.appendChild(sentinel);
+                                sentinelObserver.observe(sentinel);
+                            }
+                        }
+                        container.classList.remove('lazy-load-group');
+                        observer.unobserve(container);
+                    }
+                });
+            }, {
+                rootMargin: '200px'
+            });
+            groupsToLoad.forEach(group => groupObserver.observe(group));
+        }
+
+        function applyFiltersAndRender() {
+            if (isInitialLoad) {
+                expandedGroupIds.clear();
+            } else {
+                expandedGroupIds.clear();
+                document.querySelectorAll('[id^="group_"]:not(.hidden)').forEach(el => expandedGroupIds.add(el.id));
+            }
+
+            const brands = document.getElementById('brands').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+            const sizesInput = document.getElementById('sizes').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+            const sizes = sizesInput.map(s => {
+                if (/\d/.test(s) && /[a-zA-Z]/.test(s)) {
+                    return s.replace(/[^0-9.]/g, '');
+                }
+                return s;
+            });
+            const gender = document.getElementById('gender').value;
+            const sortBy = document.getElementById('sort_by').value;
+            const minDiscount = parseFloat(document.getElementById('min_discount').value) || 0;
+            const minPrice = parseFloat(document.getElementById('min_price').value) || 0;
+            const maxPrice = parseFloat(document.getElementById('max_price').value) || Infinity;
+
+            filteredProducts = allProducts.filter(p => {
+                if (p.discount < minDiscount) return false;
+                if (p.lowest < minPrice || p.lowest > maxPrice) return false;
+                if (brands.length && (!p.brand || !brands.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
+                if (sizes.length && !sizes.some(s => (p.sizes || []).some(ps => ps.toLowerCase().includes(s)))) return false;
+                if (gender === 'other') {
+                    if (!p.isGenderless) return false;
+                } else if (gender) {
+                    if (p.gender !== gender || p.isGenderless) return false;
+                }
+                return true;
+            });
+
+            if (sortBy === 'price_low') filteredProducts.sort((a, b) => a.lowest - b.lowest);
+            else if (sortBy === 'price_high') filteredProducts.sort((a, b) => b.lowest - a.lowest);
+            else filteredProducts.sort((a, b) => b.discount - a.discount);
+
+            const groupBy = document.getElementById('group_by').value;
+            groupedData = getGroupedData(groupBy, filteredProducts);
+            document.getElementById('product-count').textContent = `${filteredProducts.length} of ${allProducts.length} products shown`;
+
+            renderSkeletonUI();
+            setupGroupObserver();
+
+            isInitialLoad = false;
+        }
+
+        async function initialDataFetch() {
+            document.getElementById('progress-container').style.display = 'block';
+            try {
+                const [productsRes, categoriesRes] = await Promise.all([
+                    fetch('/products.json.br'),
+                    fetch('/categories.json.br')
+                ]);
+                if (!productsRes.ok) throw new Error(`HTTP error! status: ${productsRes.status}`);
+                if (!categoriesRes.ok) throw new Error(`HTTP error! status: ${categoriesRes.status}`);
+                allProducts = await productsRes.json();
+                const categoriesData = await categoriesRes.json();
+
+                sectionToCatMap = {
+                    men: {},
+                    women: {},
+                    'everything-else': {}
+                };
+
+                Object.keys(categoriesData).forEach(section => {
+                    const cats = categoriesData[section];
+                    const map = sectionToCatMap[section];
+
+                    function traverse(catArr) {
+                        catArr.forEach(cat => {
+                            map[cat.id] = {
+                                name: cat.name,
+                                seoKeyword: cat.seoKeyword,
+                                level: cat.level
+                            };
+                            if (cat.children) traverse(cat.children);
+                        });
+                    }
+                    traverse(cats);
+                });
+
+                const brandList = document.getElementById('brand-list');
+                const uniqueBrands = [...new Set(allProducts.map(p => p.brand))].sort();
+                uniqueBrands.forEach(brand => {
+                    const option = document.createElement('option');
+                    option.value = brand;
+                    brandList.appendChild(option);
+                });
+                applyFiltersAndRender();
+            } catch (error) {
+                console.error('Failed to fetch product data:', error);
+                document.getElementById('nested-list').innerHTML = '<p style="text-align: center; color: red; padding: 2rem;">Error loading data. Please try again.</p>';
+            } finally {
+                document.getElementById('progress-container').style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const debouncedApplyFilters = debounce(applyFiltersAndRender, 350);
+            document.querySelectorAll('#filters select, #filters input').forEach(el => {
+                el.addEventListener('change', applyFiltersAndRender);
+                el.addEventListener('input', debouncedApplyFilters);
+            });
+
+            sentinelObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sentinel = entry.target;
+                        const groupKeyPath = JSON.parse(sentinel.dataset.groupKey);
+                        const nextIndex = parseInt(sentinel.dataset.nextIndex, 10);
+                        const products = deepGet(groupedData, groupKeyPath);
+                        const table = sentinel.previousElementSibling;
+                        const tbody = table.querySelector('tbody');
+
+                        if (products && tbody) {
+                            appendTableRows(tbody, products, nextIndex, CHUNK_SIZE);
+                            const newNextIndex = nextIndex + CHUNK_SIZE;
+
+                            if (newNextIndex >= products.length) {
+                                observer.unobserve(sentinel);
+                                sentinel.remove();
+                            } else {
+                                sentinel.dataset.nextIndex = newNextIndex;
+                            }
+                        }
+                    }
+                });
+            }, {
+                rootMargin: '400px'
+            });
+
+            document.getElementById('nested-list').addEventListener('click', e => {
+                if (e.target.classList.contains('product-thumbnail')) {
+                    const clickedWrapper = e.target.parentElement;
+                    const isExpanding = !clickedWrapper.classList.contains('expanded');
+                    const previouslyExpandedWrapper = document.querySelector('.image-wrapper.expanded');
+
+                    if (previouslyExpandedWrapper) {
+                        previouslyExpandedWrapper.classList.remove('expanded');
+                        previouslyExpandedWrapper.style.transform = ''; // Clear adjustments
+                        manageImageNav(previouslyExpandedWrapper, false);
+                    }
+
+                    if (isExpanding && clickedWrapper !== previouslyExpandedWrapper) {
+                        clickedWrapper.classList.add('expanded');
+                        manageImageNav(clickedWrapper, true);
+
+                        requestAnimationFrame(() => {
+                            const header = document.querySelector('.site-header');
+                            const headerHeight = header ? header.getBoundingClientRect().height : 0;
+                            const rect = clickedWrapper.getBoundingClientRect();
+                            const viewportHeight = window.innerHeight;
+                            let adjustment = 0;
+                            const margin = 10;
+
+                            if (rect.top < headerHeight + margin) {
+                                adjustment = (headerHeight + margin) - rect.top;
+                            } else if (rect.bottom > viewportHeight - margin) {
+                                adjustment = (viewportHeight - margin) - rect.bottom;
+                            }
+
+                            if (adjustment !== 0) {
+                                clickedWrapper.style.transform = `translateY(-50%) translateY(${adjustment}px)`;
+                            }
+                        });
+
+                    } else if (!isExpanding) {
+                        const thumbnail = clickedWrapper.querySelector('.product-thumbnail');
+                        const images = JSON.parse(clickedWrapper.dataset.images || '[]');
+                        if (images.length > 0) {
+                            thumbnail.src = images[0];
+                            clickedWrapper.dataset.currentIndex = "0";
+                        }
+                    }
+                }
+            });
+
+            initialDataFetch();
+        });
+
+        function manageImageNav(wrapper, shouldShow) {
+            wrapper.querySelectorAll('.image-nav-arrow').forEach(arrow => arrow.remove());
+            if (!shouldShow) return;
+            const images = JSON.parse(wrapper.dataset.images || '[]');
+            if (images.length <= 1) return;
+            const createArrow = (direction) => {
+                const arrow = document.createElement('button');
+                arrow.className = `image-nav-arrow ${direction}`;
+                arrow.innerHTML = direction === 'left' ? '&#10094;' : '&#10095;';
+                arrow.onclick = (e) => {
+                    e.stopPropagation();
+                    let currentIndex = parseInt(wrapper.dataset.currentIndex, 10);
+                    const totalImages = images.length;
+                    currentIndex = (direction === 'left') ? (currentIndex - 1 + totalImages) % totalImages : (currentIndex + 1) % totalImages;
+                    wrapper.dataset.currentIndex = currentIndex;
+                    wrapper.querySelector('img.product-thumbnail').src = images[currentIndex];
+                };
+                wrapper.appendChild(arrow);
+            };
+            createArrow('left');
+            createArrow('right');
+        }
+    </script>
 </body>
 </html>
