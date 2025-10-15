@@ -10,7 +10,7 @@ from tqdm.asyncio import tqdm
 # Configuration
 BASE = "https://www.ssense.com/en-ca/" # Not sure what happens if set to another country, there are "en" keys grabbed when scraping.
 LIMIT = 500 # Concurrency limit, diminishing returns above 500.
-DELAY = 5 # Wouldn't go lower.
+DELAY = 5 # Wouldn't go lower than 5.
 RETRIES = 3
 NAMESPACE = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9', 'image': 'http://www.google.com/schemas/sitemap-image/1.1'}
 
@@ -54,9 +54,10 @@ async def main():
     captcha.set()
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch_persistent_context(user_data_dir="chrome_data", channel="chrome", headless=False, no_viewport=True)
+        browser = await playwright.chromium.launch_persistent_context(user_data_dir="Chrome", channel="chrome", headless=False, no_viewport=True)
         page = browser.pages[0]
         await page.goto(f"{BASE}men")
+        await asyncio.sleep(5)
         
         # Step 1: Fetch and save structured category data.
         print("Fetching categories...")
