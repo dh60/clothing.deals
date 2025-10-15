@@ -9,7 +9,7 @@ from tqdm.asyncio import tqdm
 
 # Configuration
 BASE = "https://www.ssense.com/en-ca" # Not sure what happens if set to another country.
-LIMIT = 400 # Concurrency limit. Default 400, might throttle above this. Hard limit is 1350.
+LIMIT = 500 # Concurrency limit. Default 500, might have issues above this. Hard limit is 1350.
 DELAY = 5 # Error retry delay. Wouldn't go lower than 5.
 RETRIES = 3 # Error retry count. If you're using all 3 retries then increase delay.
 
@@ -112,14 +112,12 @@ async def main():
                         "country": p["countryOrigin"]["nameByLanguage"]["en"],
                     }
             except Exception as e:
-                tqdm.write(f"Data parsing error for {url}.json: {e}")
+                tqdm.write(f"Data parsing error for {url}: {e}")
             return None
 
         products = []
         scrape_tasks = [scrape(url, images) for url, images in product_urls]
-        for future in tqdm(asyncio.as_completed(scrape_tasks), total=len(scrape_tasks), desc="Scraping", mininterval=1):
-            if product := await future:
-                products.append(product)
+        products = [p for p in await tqdm.gather(*scrape_tasks, desc="Scraping", mininterval=1) if p is not None]
 
     # Step 4: Compress all scraped data to a JSON file.
     tqdm.write(f"Saving {len(products)} products (this might take a few minutes)...")
