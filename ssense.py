@@ -8,39 +8,38 @@ from patchright.async_api import async_playwright
 from tqdm.asyncio import tqdm
 
 # Configuration
-BASE = "https://www.ssense.com/en-ca/" # Not sure what happens if set to another country, there are "en" keys grabbed when scraping.
-LIMIT = 500 # Concurrency limit, diminishing returns above 500.
+BASE = "https://www.ssense.com/en-ca" # Not sure what happens if set to another country, there are "en" keys grabbed when scraping.
+LIMIT = 500 # Concurrency limit. Default 500, might throttle above this. Hard limit is 1350.
 DELAY = 5 # Wouldn't go lower than 5.
 RETRIES = 3
 NAMESPACE = {'s': 'http://www.sitemaps.org/schemas/sitemap/0.9', 'image': 'http://www.google.com/schemas/sitemap-image/1.1'}
 
-async def fetch(url, browser, page, pool, lock, captcha):
-    """Asynchronously fetches a URL, handling retries and CAPTCHA."""
+async def fetch(url, page, pool, lock, nocaptcha):
     for attempt in range(RETRIES):
-        await captcha.wait()
+        await nocaptcha.wait()
         async with pool:
             try:
-                response = await browser.request.get(url)
-                if response.ok:
-                    return await response.body()
-                if response.status == 404:
+                status, body = await page.evaluate("async url => { const r = await fetch(url); return [r.status, await r.text()]; }", url)
+                if status == 200:
+                    return body.encode()
+                if status == 404:
                     return None
-                if response.status == 403:
+                if status == 403:
                     if lock.locked():
-                        await captcha.wait()
+                        continue
                     else:
                         async with lock:
-                            tqdm.write("CAPTCHA detected! Please solve it in the browser.")
-                            captcha.clear()
+                            tqdm.write("CAPTCHA detected! Solve it in the browser.")
+                            nocaptcha.clear()
                             await page.bring_to_front()
                             await page.reload()
                             while "Access to this page has been denied" in await page.title():
                                 await asyncio.sleep(1)
-                            captcha.set()
+                            nocaptcha.set()
                     continue
-                tqdm.write(f"{response.status} for {url}, Attempt {attempt + 1}/3")
-            except Exception as e:
-                tqdm.write(f"Connection error for {url}, Attempt {attempt + 1}/3")
+                tqdm.write(f"{status} for {url}, Attempt {attempt + 1}/{RETRIES}")
+            except Exception:
+                tqdm.write(f"Error for {url}, Attempt {attempt + 1}/{RETRIES}")
         await asyncio.sleep(DELAY)
     tqdm.write(f"Skipping {url} after {RETRIES} retries.")
     return None
@@ -50,19 +49,18 @@ async def main():
     start = time()
     pool = asyncio.Semaphore(LIMIT)
     lock = asyncio.Lock()
-    captcha = asyncio.Event()
-    captcha.set()
+    nocaptcha = asyncio.Event()
+    nocaptcha.set()
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch_persistent_context(user_data_dir="Chrome", channel="chrome", headless=False, no_viewport=True)
         page = browser.pages[0]
-        await page.goto(f"{BASE}men")
-        await asyncio.sleep(1)
+        await page.goto(f"{BASE}/men")
         
         # Step 1: Fetch and save structured category data.
         print("Fetching categories...")
         section = ["men", "women", "everything-else"]
-        contents = await asyncio.gather(*[fetch(f"{BASE}api/navigation/{s}/v2.json", browser, page, pool, lock, captcha) for s in section])
+        contents = await asyncio.gather(*[fetch(f"{BASE}/api/navigation/{s}/v2.json", page, pool, lock, nocaptcha) for s in section])
         category_data = {s: orjson.loads(c).get('menuData', {}).get('categories', []) if c else [] for s, c in zip(section, contents)}
         print("Saving category data...")
         with open('categories.json.br', "wb") as f:
@@ -70,10 +68,10 @@ async def main():
         
         # Step 2: Fetch and parse product URLs from sitemaps.
         product_urls = []
-        sitemap_xml = await fetch("https://www.ssense.com/sitemap.xml", browser, page, pool, lock, captcha)
+        sitemap_xml = await fetch("https://www.ssense.com/sitemap.xml", page, pool, lock, nocaptcha)
         if sitemap_xml:
             sitemap_urls = etree.fromstring(sitemap_xml).xpath("//s:loc[contains(text(), 'sitemap_products_list')]/text()", namespaces=NAMESPACE)
-            tasks = [fetch(url, browser, page, pool, lock, captcha) for url in sitemap_urls]
+            tasks = [fetch(url, page, pool, lock, nocaptcha) for url in sitemap_urls]
             for sitemap_content_future in tqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Parsing Sitemaps"):
                 if content := await sitemap_content_future:
                     tree = etree.fromstring(content)
@@ -81,18 +79,17 @@ async def main():
                         loc = element.xpath('s:loc/text()', namespaces=NAMESPACE)
                         if not loc:
                             continue
-                        url = re.sub(r'https://www.ssense.com/[a-z]{2}-[a-z]{2}/', BASE, loc[0])
+                        url = re.sub(r'https://www.ssense.com/[a-z]{2}-[a-z]{2}', BASE, loc[0])
                         images = element.xpath('image:image/image:loc/text()', namespaces={'image': NAMESPACE['image']})
                         product_urls.append((url, images))
         print(f"Found {len(product_urls)} products.")
-        queue = {url: (url, images) for url, images in product_urls}
         
         # Step 3: Scrape JSON data for each product URL, and put it in a list.
         async def scrape(url, images):
             """Fetches and processes a single product's JSON data."""
             json_url = f"{url}.json"
             for _ in range(RETRIES):
-                content = await fetch(json_url, browser, page, pool, lock, captcha)
+                content = await fetch(json_url, page, pool, lock, nocaptcha)
                 if content is None:
                     return None
                 data = orjson.loads(content)
@@ -124,7 +121,7 @@ async def main():
             return None
 
         products = []
-        scrape_tasks = [scrape(url, images) for url, images in queue.values()]
+        scrape_tasks = [scrape(url, images) for url, images in product_urls]
         for future in tqdm(asyncio.as_completed(scrape_tasks), total=len(scrape_tasks), desc="Scraping Products"):
             if product := await future:
                 products.append(product)
