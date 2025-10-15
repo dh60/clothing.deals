@@ -9,7 +9,7 @@ from tqdm.asyncio import tqdm
 
 # Configuration
 BASE = "https://www.ssense.com/en-ca" # Not sure what happens if set to another country.
-LIMIT = 400 # Concurrency limit. Default 400, might have issues above this. Hard limit is 1350.
+LIMIT = 300 # Concurrency limit. Default 300, might have issues above this. Hard limit is 1350.
 DELAY = 5 # Error retry delay. Wouldn't go lower than 5.
 RETRIES = 3 # Error retry count. If you're using all 3 retries then increase delay.
 
@@ -34,7 +34,7 @@ async def fetch(url, page, pool, lock, nocaptcha):
                     continue
                 tqdm.write(f"{status} for {url}, Attempt {attempt + 1}/{RETRIES}")
             except Exception as e:
-                tqdm.write(f"Error for {url}, Attempt {attempt + 1}/{RETRIES}: {type(e).__name__}: {e}")
+                tqdm.write(f"Error for {url}, Attempt {attempt + 1}/{RETRIES}: {e}")
         await asyncio.sleep(DELAY)
     tqdm.write(f"Skipping {url} after {RETRIES} retries.")
     return None
