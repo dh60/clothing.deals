@@ -54,7 +54,7 @@ async def main():
     captcha.set()
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch_persistent_context('user_data', channel="chrome", headless=False, no_viewport=True)
+        browser = await playwright.chromium.launch_persistent_context(user_data_dir="chrome_data", channel="chrome", headless=False, no_viewport=True)
         page = browser.pages[0]
         await page.goto(f"{BASE}men")
         
