@@ -57,12 +57,10 @@ Then open your browser and go to:
         .\venv\Scripts\activate
         ```
 
-3.  **Install Python dependencies from `requirements.txt`:**
+3.  **Install dependencies:**
     ```sh
     pip install -r requirements.txt
     ```
-
-4.  **Install Chrome (if you don't have it)**
     ```sh
-    patchright install chrome
+    patchright install chromium --no-shell
     ```
