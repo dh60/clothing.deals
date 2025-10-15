@@ -21,6 +21,7 @@ async def fetch(url, browser, page, pool, lock, captcha):
         async with pool:
             try:
                 response = await browser.request.get(url)
+                print(response.status)
                 if response.ok:
                     return await response.body()
                 if response.status == 404:
@@ -57,7 +58,7 @@ async def main():
         browser = await playwright.chromium.launch_persistent_context(user_data_dir="Chrome", channel="chrome", headless=False, no_viewport=True)
         page = browser.pages[0]
         await page.goto(f"{BASE}men")
-        await asyncio.sleep(5)
+        await asyncio.sleep(1)
         
         # Step 1: Fetch and save structured category data.
         print("Fetching categories...")
