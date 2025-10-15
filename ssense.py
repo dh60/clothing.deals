@@ -35,8 +35,8 @@ async def fetch(url, page, pool, lock, nocaptcha):
                             nocaptcha.set()
                     continue
                 tqdm.write(f"{status} for {url}, Attempt {attempt + 1}/{RETRIES}")
-            except Exception as e:
-                tqdm.write(f"{type(e).__name__} for {url}, Attempt {attempt + 1}/{RETRIES}")
+            except Exception:
+                tqdm.write(f"Error for {url}, Attempt {attempt + 1}/{RETRIES}")
         await asyncio.sleep(DELAY)
     tqdm.write(f"Skipping {url} after {RETRIES} retries.")
     return None
