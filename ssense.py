@@ -21,7 +21,6 @@ async def fetch(url, browser, page, pool, lock, captcha):
         async with pool:
             try:
                 response = await browser.request.get(url)
-                print(response.status)
                 if response.ok:
                     return await response.body()
                 if response.status == 404:
