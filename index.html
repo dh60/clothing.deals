@@ -113,25 +113,6 @@
             text-align: center;
             line-height: .8rem;
         }
-        .group-level-0 {
-            font-weight: 600;
-            background: var(--stripe-color);
-        }
-        .group-level-1 {
-            font-weight: 500;
-            background: #fff;
-            margin-left: 1rem;
-        }
-        .group-level-2 {
-            font-weight: 400;
-            background: var(--stripe-color);
-            margin-left: 2rem;
-        }
-        .group-level-3 {
-            font-weight: 400;
-            background: #fff;
-            margin-left: 3rem;
-        }
         .product-list {
             padding-left: .5rem;
             border-left: 2px solid var(--nested-border-color);
@@ -482,20 +463,27 @@
                     if (Array.isArray(value)) {
                         const toggleIcon = isExpanded ? '−' : '+';
                         const header = document.createElement('div');
-                        header.className = `group-header group-level-${level}`;
+                        header.className = 'group-header';
+                        header.style.marginLeft = level > 0 ? `${level}rem` : '0';
+                        header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
+                        header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
                         header.onclick = () => toggleSection(groupId);
                         header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${value.length})`;
                         subContainer.appendChild(header);
                         const tableContainer = document.createElement('div');
                         tableContainer.id = groupId;
-                        tableContainer.className = `product-list group-level-${level} lazy-load-group ${isExpanded ? '' : 'hidden'}`;
+                        tableContainer.className = `product-list lazy-load-group ${isExpanded ? '' : 'hidden'}`;
+                        tableContainer.style.marginLeft = level > 0 ? `${level}rem` : '0';
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
                         subContainer.appendChild(tableContainer);
                     } else {
                         const childProductCount = value.ALL ? value.ALL.length : countProducts(value);
                         const toggleIcon = isExpanded ? '−' : '+';
                         const header = document.createElement('div');
-                        header.className = `group-header group-level-${level}`;
+                        header.className = 'group-header';
+                        header.style.marginLeft = level > 0 ? `${level}rem` : '0';
+                        header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
+                        header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
                         header.onclick = () => toggleSection(groupId);
                         header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${childProductCount})`;
                         subContainer.appendChild(header);
