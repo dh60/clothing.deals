@@ -349,6 +349,13 @@
             const isHidden = el.classList.toggle('hidden');
             const toggleIcon = document.querySelector(`[data-toggle="${id}"]`);
             if (toggleIcon) toggleIcon.textContent = isHidden ? '+' : '−';
+
+            // Track expanded state
+            if (isHidden) {
+                expandedGroupIds.delete(id);
+            } else {
+                expandedGroupIds.add(id);
+            }
         }
 
         function formatDescription(text) {
@@ -359,42 +366,72 @@
         function getCategoryPath(p) {
             const section = p.isGenderless ? 'everything-else' : p.gender;
             const catMap = sectionToCatMap[section];
-            if (!catMap) return 'Unknown';
-            const names = p.allCategoryIds.map(id => {
-                const cat = catMap[Number(id)];
-                return cat ? cat.name : 'Unknown';
-            });
-            return names.join(' > ') || 'Uncategorized';
+            if (!catMap) return ['Unknown'];
+            const names = p.allCategoryIds.map(id => catMap[Number(id)]?.name || 'Unknown');
+            return names.length ? names : ['Uncategorized'];
         }
 
         const deepGet = (obj, path) => path.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, obj);
 
+        function getSizeSortValue(size) {
+            // For numeric sizes, return the number
+            const num = parseFloat(size);
+            if (!isNaN(num)) return num;
+
+            // For letter sizes: XXXS -> XXS -> XS -> S -> M -> L -> XL -> XXL -> XXXL
+            const upper = size.toUpperCase();
+
+            // Special cases
+            if (upper === 'ONE SIZE' || upper === 'OS') return 1000; // Put at end
+            if (upper === 'M') return 100; // Medium in the middle
+
+            // Count X's and check if it ends with S or L
+            const xCount = (upper.match(/X/g) || []).length;
+            if (upper.endsWith('S')) {
+                // Smaller sizes: more X's = smaller (XXXS=97, XXS=98, XS=99, S=100)
+                return 100 - xCount - 1;
+            } else if (upper.endsWith('L')) {
+                // Larger sizes: more X's = larger (L=101, XL=102, XXL=103, XXXL=104)
+                return 100 + xCount + 1;
+            }
+
+            // Unknown format, put at end
+            return 2000;
+        }
+
         function getGroupedData(products) {
             let groups = {};
             const deepSet = (obj, path, value) => {
-                let schema = obj;
-                for (let i = 0; i < path.length; i++) {
+                let current = obj;
+                // Navigate to the parent of the final segment
+                for (let i = 0; i < path.length - 1; i++) {
                     const segment = path[i];
-                    if (!schema[segment]) {
-                        schema[segment] = i === path.length - 1 ? [] : {};
+                    if (!current[segment]) {
+                        current[segment] = {};
                     }
-                    if (Array.isArray(schema[segment]) && i < path.length - 1) return;
-                    if (typeof schema[segment] === 'object' && !Array.isArray(schema[segment]) && i === path.length - 1) return;
-                    schema = schema[segment];
+                    if (Array.isArray(current[segment])) return; // Can't traverse into arrays
+                    current = current[segment];
                 }
-                schema.push(value);
+                // Initialize final segment as array if needed, then push
+                const lastSegment = path[path.length - 1];
+                if (!current[lastSegment]) {
+                    current[lastSegment] = [];
+                }
+                if (Array.isArray(current[lastSegment])) {
+                    current[lastSegment].push(value);
+                }
             };
 
             products.forEach(p => {
-                const categoryPath = getCategoryPath(p).split(' > ');
+                const categoryPath = getCategoryPath(p);
                 deepSet(groups, categoryPath, p);
 
-                if (categoryPath.length > 1) {
-                    for (let i = 1; i < categoryPath.length; i++) {
-                        const subPath = categoryPath.slice(0, i);
-                        if (categoryPath[i] !== 'ALL') {
-                            deepSet(groups, [...subPath, 'ALL'], p);
-                        }
+                // Add product to 'ALL' subcategories at each level
+                // For path ['Men', 'Clothing', 'Shirts'], creates:
+                // ['Men', 'ALL'] and ['Men', 'Clothing', 'ALL']
+                for (let i = 1; i < categoryPath.length; i++) {
+                    if (categoryPath[i] !== 'ALL') {
+                        deepSet(groups, [...categoryPath.slice(0, i), 'ALL'], p);
                     }
                 }
             });
@@ -536,16 +573,15 @@
         }
 
         function applyFiltersAndRender() {
-            expandedGroupIds.clear();
-            if (!isInitialLoad) {
-                document.querySelectorAll('[id^="group_"]:not(.hidden)').forEach(el => expandedGroupIds.add(el.id));
+            // Clear expanded groups only on initial load
+            if (isInitialLoad) {
+                expandedGroupIds.clear();
             }
+            // Otherwise preserve the expandedGroupIds Set (already tracked in toggleSection)
 
             const brand = parseInput('brand', s => s.toLowerCase());
             const color = parseInput('color', s => s.toLowerCase());
-            const size = parseInput('size', s => s.toUpperCase()).map(s =>
-                /\d/.test(s) && /[a-zA-Z]/.test(s) ? s.replace(/[^0-9.]/g, '') : s
-            );
+            const size = parseInput('size', s => s.match(/[\d.]+/)?.[0] || s.trim().toUpperCase());
             const gender = document.getElementById('gender').value;
             const sortBy = document.getElementById('sort_by').value;
             const minDiscount = parseFloat(document.getElementById('min_discount').value) || 0;
@@ -555,12 +591,9 @@
             filteredProducts = allProducts.filter(p => {
                 if (p.discount < minDiscount) return false;
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
-                if (brand.length && (!p.brand || !brand.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
-                if (color.length && (!p.color || !color.some(c => p.color.toLowerCase().includes(c)))) return false;
-                if (size.length && !size.some(s => {
-                    const isAlpha = /^[A-Z]+$/i.test(s);
-                    return (p.sizes || []).some(ps => isAlpha ? ps === s : ps.split(/\s+/).some(token => token === s));
-                })) return false;
+                if (brand.length && (!p.brandLower || !brand.some(b => p.brandLower.startsWith(b)))) return false;
+                if (color.length && (!p.colorLower || !color.some(c => p.colorLower.includes(c)))) return false;
+                if (size.length && !size.some(s => (p.sizes || []).includes(s))) return false;
                 return gender === 'other' ? p.isGenderless : (p.gender === gender && !p.isGenderless);
             });
 
@@ -584,6 +617,24 @@
                 if (!productsRes.ok) throw new Error(`HTTP error! status: ${productsRes.status}`);
                 if (!categoriesRes.ok) throw new Error(`HTTP error! status: ${categoriesRes.status}`);
                 allProducts = await productsRes.json();
+
+                // Normalize and pre-compute values for cleaner display and faster filtering
+                allProducts.forEach(p => {
+                    // Normalize and sort sizes
+                    if (p.sizes) {
+                        p.sizes = p.sizes
+                            .map(size => {
+                                // If size contains a number, extract just the numeric part (e.g., "8.5 US" -> "8.5")
+                                // Otherwise keep alphabetic sizes as-is (e.g., "XS", "ONE SIZE")
+                                return size.match(/[\d.]+/)?.[0] || size.trim();
+                            })
+                            .sort((a, b) => getSizeSortValue(a) - getSizeSortValue(b));
+                    }
+                    // Pre-compute lowercase for filtering
+                    p.brandLower = p.brand ? p.brand.toLowerCase() : '';
+                    p.colorLower = p.color ? p.color.toLowerCase() : '';
+                });
+
                 const categoriesData = await categoriesRes.json();
 
                 sectionToCatMap = {
