@@ -109,7 +109,7 @@
         }
         table {
             border-collapse: collapse;
-            font-size: .8rem;
+            font-size: .9rem;
             width: 100%;
             table-layout: fixed;
         }
@@ -133,7 +133,7 @@
         }
         td.price-cell,
         th.price-cell {
-            width: 10vw;
+            width: 60px;
         }
         td.discount,
         th.discount {
@@ -189,10 +189,10 @@
         }
         td.description-cell {
             width: 10vw;
-            white-space: normal;
+            white-space: pre-wrap;
         }
         .description-content {
-            max-height: 7em;
+            max-height: 6em;
             overflow: hidden;
         }
         th {
@@ -202,7 +202,30 @@
             top: 0;
             z-index: 1;
         }
-        tr:nth-child(even) {
+        .image-nav-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 11;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        .image-nav-arrow:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .image-nav-arrow.left {
+            left: 5px;
+        }
+        .image-nav-arrow.right {
+            right: 5px;
+        }
+                tr:nth-child(even) {
             background: var(--stripe-color);
         }
         tr:hover {
@@ -241,29 +264,6 @@
             100% {
                 transform: translateX(100%);
             }
-        }
-        .image-nav-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 11;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 10px 8px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        .image-nav-arrow:hover {
-            background-color: rgba(0, 0, 0, 0.8);
-        }
-        .image-nav-arrow.left {
-            left: 5px;
-        }
-        .image-nav-arrow.right {
-            right: 5px;
         }
         .load-sentinel {
             height: 50px;
