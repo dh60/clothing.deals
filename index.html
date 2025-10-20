@@ -291,7 +291,7 @@
                 </div>
                 <div>
                     <label for="brand">Brand</label>
-                    <input type="text" id="brand" placeholder="Nike, Gucci..." list="brand-list">
+                    <input type="text" id="brand" placeholder="Nike, Burberry..." list="brand-list">
                 </div>
             </div>
             <div class="filter-group">
@@ -334,6 +334,11 @@
         let expandedGroupIds = new Set();
         const CHUNK_SIZE = 50;
         let sectionToCatMap = {};
+        // Gender pre-filtering cache
+        let genderFilteredProducts = [];
+        let lastGender = '';
+        // Track last filtered results to avoid unnecessary re-renders
+        let lastFilteredProductIds = '';
 
         function debounce(func, delay) {
             let timeout;
@@ -356,11 +361,6 @@
             } else {
                 expandedGroupIds.add(id);
             }
-        }
-
-        function formatDescription(text) {
-            if (!text) return '';
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
 
         function getCategoryPath(p) {
@@ -423,32 +423,31 @@
             };
 
             products.forEach(p => {
-                const categoryPath = getCategoryPath(p);
-                deepSet(groups, categoryPath, p);
+                // Use pre-computed category path
+                deepSet(groups, p.categoryPath, p);
 
                 // Add product to 'ALL' subcategories at each level
                 // For path ['Men', 'Clothing', 'Shirts'], creates:
                 // ['Men', 'ALL'] and ['Men', 'Clothing', 'ALL']
-                for (let i = 1; i < categoryPath.length; i++) {
-                    if (categoryPath[i] !== 'ALL') {
-                        deepSet(groups, [...categoryPath.slice(0, i), 'ALL'], p);
+                // Build path incrementally to avoid array spreading
+                const allPath = [];
+                for (let i = 0; i < p.categoryPath.length - 1; i++) {
+                    allPath.push(p.categoryPath[i]);
+                    if (p.categoryPath[i] !== 'ALL') {
+                        allPath.push('ALL');
+                        deepSet(groups, allPath, p);
+                        allPath.pop(); // Remove 'ALL' for next iteration
                     }
                 }
             });
 
-            const sortKeys = (obj) => {
-                if (Array.isArray(obj)) return obj;
-                const sorted = {};
-                Object.keys(obj).sort((a, b) => a.localeCompare(b)).forEach(key => {
-                    sorted[key] = sortKeys(obj[key]);
-                });
-                return sorted;
-            };
-            return sortKeys(groups);
+            // Don't sort here - let renderLevel handle sorting at render time
+            return groups;
         }
 
         function appendTableRows(tbody, products, startIndex, count) {
             const productsToShow = products.slice(startIndex, startIndex + count);
+            const fragment = document.createDocumentFragment();
             productsToShow.forEach(p => {
                 const tr = document.createElement('tr');
                 const hue = Math.min(p.discount / 90, 1) * 120;
@@ -457,15 +456,12 @@
                 const brand = p.brand || 'N/A';
                 const imageUrl = p.images?.[0] || '';
                 const description = p.description || '';
-                const imageWrapperData = `data-images='${JSON.stringify(p.images || [])}' data-current-index="0"`;
+                const imageWrapperData = `data-images='${p.imagesJson}' data-current-index="0"`;
                 const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
-                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${formatDescription(description)}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
-                tbody.appendChild(tr);
+                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
+                fragment.appendChild(tr);
             });
-        }
-
-        function countProducts(data) {
-            return Array.isArray(data) ? data.length : Object.values(data).reduce((sum, val) => sum + countProducts(val), 0);
+            tbody.appendChild(fragment);
         }
 
         function renderSkeletonUI() {
@@ -488,15 +484,14 @@
             };
 
             const renderLevel = (subContainer, data, level, pathPrefix) => {
-                const sortedKeys = Object.keys(data);
-                if (sortedKeys.includes('ALL')) {
-                    sortedKeys.sort((a, b) => {
-                        if (a === 'ALL') return -1;
-                        if (b === 'ALL') return 1;
-                        return a.localeCompare(b);
-                    });
-                }
+                // Always sort keys: 'ALL' first, then alphabetically
+                const sortedKeys = Object.keys(data).sort((a, b) => {
+                    if (a === 'ALL') return -1;
+                    if (b === 'ALL') return 1;
+                    return a.localeCompare(b);
+                });
 
+                const fragment = document.createDocumentFragment();
                 sortedKeys.forEach(key => {
                     const value = data[key];
                     const currentPathArray = [...pathPrefix, key];
@@ -506,24 +501,26 @@
 
                     if (Array.isArray(value)) {
                         const header = createHeader(level, groupId, toggleIcon, `${key} (${value.length})`);
-                        subContainer.appendChild(header);
+                        fragment.appendChild(header);
                         const tableContainer = document.createElement('div');
                         tableContainer.id = groupId;
                         tableContainer.className = `product-table lazy-load-group ${isExpanded || 'hidden'}`;
                         tableContainer.style.marginLeft = `${level}rem`;
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
-                        subContainer.appendChild(tableContainer);
+                        fragment.appendChild(tableContainer);
                     } else {
-                        const childProductCount = value.ALL ? value.ALL.length : countProducts(value);
+                        // Non-leaf nodes always have an ALL subcategory with all descendant products
+                        const childProductCount = value.ALL.length;
                         const header = createHeader(level, groupId, toggleIcon, `${key} (${childProductCount})`);
-                        subContainer.appendChild(header);
+                        fragment.appendChild(header);
                         const innerContainer = document.createElement('div');
                         innerContainer.id = groupId;
                         innerContainer.className = isExpanded || 'hidden';
-                        subContainer.appendChild(innerContainer);
+                        fragment.appendChild(innerContainer);
                         renderLevel(innerContainer, value, level + 1, currentPathArray);
                     }
                 });
+                subContainer.appendChild(fragment);
             };
             renderLevel(container, groupedData, 0, []);
         }
@@ -588,16 +585,44 @@
             const minPrice = parseFloat(document.getElementById('min_price').value) || 0;
             const maxPrice = parseFloat(document.getElementById('max_price').value) || Infinity;
 
-            filteredProducts = allProducts.filter(p => {
-                if (p.discount < minDiscount) return false;
+            // Pre-filter by gender (cache since it rarely changes)
+            if (gender !== lastGender) {
+                genderFilteredProducts = allProducts.filter(p =>
+                    gender === 'other' ? p.isGenderless : (p.gender === gender && !p.isGenderless)
+                );
+                lastGender = gender;
+            }
+
+            // Cache filter array lengths outside the loop
+            const hasBrandFilter = brand.length > 0;
+            const hasColorFilter = color.length > 0;
+            const hasSizeFilter = size.length > 0;
+
+            // Order filters by selectivity (most selective first) for early short-circuit
+            // Now filtering the smaller gender-filtered subset instead of all 100k products
+            filteredProducts = genderFilteredProducts.filter(p => {
+                // Brand is most selective
+                if (hasBrandFilter && (!p.brandLower || !brand.some(b => p.brandLower.startsWith(b)))) return false;
+                // Size is second most selective
+                if (hasSizeFilter && !size.some(s => (p.sizes || []).includes(s))) return false;
+                // Color is third most selective
+                if (hasColorFilter && (!p.colorLower || !color.some(c => p.colorLower.includes(c)))) return false;
+                // Price and discount are less selective (checked last)
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
-                if (brand.length && (!p.brandLower || !brand.some(b => p.brandLower.startsWith(b)))) return false;
-                if (color.length && (!p.colorLower || !color.some(c => p.colorLower.includes(c)))) return false;
-                if (size.length && !size.some(s => (p.sizes || []).includes(s))) return false;
-                return gender === 'other' ? p.isGenderless : (p.gender === gender && !p.isGenderless);
+                if (p.discount < minDiscount) return false;
+                return true;
             });
 
             filteredProducts.sort((a, b) => sortBy === 'price' ? a.lowest - b.lowest : b.discount - a.discount);
+
+            // Check if filtered results actually changed to avoid unnecessary re-renders
+            const currentFilteredIds = filteredProducts.length + ':' +
+                filteredProducts.slice(0, 10).map(p => p.productCode).join(',');
+
+            if (currentFilteredIds === lastFilteredProductIds) {
+                return; // Results unchanged, skip re-render to prevent image flickering
+            }
+            lastFilteredProductIds = currentFilteredIds;
 
             groupedData = getGroupedData(filteredProducts);
 
@@ -633,6 +658,11 @@
                     // Pre-compute lowercase for filtering
                     p.brandLower = p.brand ? p.brand.toLowerCase() : '';
                     p.colorLower = p.color ? p.color.toLowerCase() : '';
+                    // Pre-compute JSON-stringified images for data attributes
+                    p.imagesJson = JSON.stringify(p.images || []);
+                    // Pre-compute HTML-escaped description
+                    const desc = p.description || '';
+                    p.descriptionEscaped = desc.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
                 });
 
                 const categoriesData = await categoriesRes.json();
@@ -660,13 +690,20 @@
                     traverse(cats);
                 });
 
+                // Pre-compute category paths now that sectionToCatMap is ready
+                allProducts.forEach(p => {
+                    p.categoryPath = getCategoryPath(p);
+                });
+
                 const populateDatalist = (listId, values) => {
                     const list = document.getElementById(listId);
+                    const fragment = document.createDocumentFragment();
                     values.forEach(value => {
                         const option = document.createElement('option');
                         option.value = value;
-                        list.appendChild(option);
+                        fragment.appendChild(option);
                     });
+                    list.appendChild(fragment);
                 };
 
                 populateDatalist('brand-list', [...new Set(allProducts.map(p => p.brand))].sort());
@@ -682,7 +719,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const debouncedApplyFilters = debounce(applyFiltersAndRender, 200);
+            const debouncedApplyFilters = debounce(applyFiltersAndRender, 100);
             document.querySelectorAll('#filters select, #filters input').forEach(el => {
                 el.addEventListener('change', applyFiltersAndRender);
                 el.addEventListener('input', debouncedApplyFilters);
