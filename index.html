@@ -418,7 +418,7 @@
                 const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
                 const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
                 const brand = p.brand || 'N/A';
-                const imageUrl = p.images && p.images.length > 0 ? p.images[0] : '';
+                const imageUrl = p.images?.[0] || '';
                 const description = p.description || '';
                 const imageWrapperData = `data-images='${JSON.stringify(p.images || [])}' data-current-index="0"`;
                 const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
@@ -428,10 +428,7 @@
         }
 
         function countProducts(data) {
-            if (Array.isArray(data)) {
-                return data.length;
-            }
-            return Object.values(data).reduce((sum, val) => sum + countProducts(val), 0);
+            return Array.isArray(data) ? data.length : Object.values(data).reduce((sum, val) => sum + countProducts(val), 0);
         }
 
         function renderSkeletonUI() {
@@ -441,6 +438,17 @@
                 container.innerHTML = '<p style="text-align:center; padding: 2rem;">No products match your criteria.</p>';
                 return;
             }
+
+            const createHeader = (level, groupId, toggleIcon, content) => {
+                const header = document.createElement('div');
+                header.className = 'group-header';
+                header.style.marginLeft = `${level}rem`;
+                header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
+                header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
+                header.onclick = () => toggleSection(groupId);
+                header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${content}`;
+                return header;
+            };
 
             const renderLevel = (subContainer, data, level, pathPrefix) => {
                 const sortedKeys = Object.keys(data);
@@ -457,37 +465,24 @@
                     const currentPathArray = [...pathPrefix, key];
                     const groupId = 'group_' + btoa(JSON.stringify(currentPathArray));
                     const isExpanded = expandedGroupIds.has(groupId);
+                    const toggleIcon = isExpanded ? '−' : '+';
 
                     if (Array.isArray(value)) {
-                        const toggleIcon = isExpanded ? '−' : '+';
-                        const header = document.createElement('div');
-                        header.className = 'group-header';
-                        header.style.marginLeft = level > 0 ? `${level}rem` : '0';
-                        header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
-                        header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
-                        header.onclick = () => toggleSection(groupId);
-                        header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${value.length})`;
+                        const header = createHeader(level, groupId, toggleIcon, `${key} (${value.length})`);
                         subContainer.appendChild(header);
                         const tableContainer = document.createElement('div');
                         tableContainer.id = groupId;
-                        tableContainer.className = `product-table lazy-load-group ${isExpanded ? '' : 'hidden'}`;
-                        tableContainer.style.marginLeft = level > 0 ? `${level}rem` : '0';
+                        tableContainer.className = `product-table lazy-load-group ${isExpanded || 'hidden'}`;
+                        tableContainer.style.marginLeft = `${level}rem`;
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
                         subContainer.appendChild(tableContainer);
                     } else {
                         const childProductCount = value.ALL ? value.ALL.length : countProducts(value);
-                        const toggleIcon = isExpanded ? '−' : '+';
-                        const header = document.createElement('div');
-                        header.className = 'group-header';
-                        header.style.marginLeft = level > 0 ? `${level}rem` : '0';
-                        header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
-                        header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
-                        header.onclick = () => toggleSection(groupId);
-                        header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${key} (${childProductCount})`;
+                        const header = createHeader(level, groupId, toggleIcon, `${key} (${childProductCount})`);
                         subContainer.appendChild(header);
                         const innerContainer = document.createElement('div');
                         innerContainer.id = groupId;
-                        innerContainer.className = isExpanded ? '' : 'hidden';
+                        innerContainer.className = isExpanded || 'hidden';
                         subContainer.appendChild(innerContainer);
                         renderLevel(innerContainer, value, level + 1, currentPathArray);
                     }
@@ -536,23 +531,21 @@
             groupsToLoad.forEach(group => groupObserver.observe(group));
         }
 
+        function parseInput(id, transform = v => v) {
+            return document.getElementById(id).value.split(',').map(s => transform(s.trim())).filter(Boolean);
+        }
+
         function applyFiltersAndRender() {
-            if (isInitialLoad) {
-                expandedGroupIds.clear();
-            } else {
-                expandedGroupIds.clear();
+            expandedGroupIds.clear();
+            if (!isInitialLoad) {
                 document.querySelectorAll('[id^="group_"]:not(.hidden)').forEach(el => expandedGroupIds.add(el.id));
             }
 
-            const brand = document.getElementById('brand').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-            const sizeInput = document.getElementById('size').value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
-            const color = document.getElementById('color').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-            const size = sizeInput.map(s => {
-                if (/\d/.test(s) && /[a-zA-Z]/.test(s)) {
-                    return s.replace(/[^0-9.]/g, '');
-                }
-                return s;
-            });
+            const brand = parseInput('brand', s => s.toLowerCase());
+            const color = parseInput('color', s => s.toLowerCase());
+            const size = parseInput('size', s => s.toUpperCase()).map(s =>
+                /\d/.test(s) && /[a-zA-Z]/.test(s) ? s.replace(/[^0-9.]/g, '') : s
+            );
             const gender = document.getElementById('gender').value;
             const sortBy = document.getElementById('sort_by').value;
             const minDiscount = parseFloat(document.getElementById('min_discount').value) || 0;
@@ -566,25 +559,12 @@
                 if (color.length && (!p.color || !color.some(c => p.color.toLowerCase().includes(c)))) return false;
                 if (size.length && !size.some(s => {
                     const isAlpha = /^[A-Z]+$/i.test(s);
-                    return (p.sizes || []).some(ps => {
-                        if (isAlpha) {
-                            return ps === s;
-                        } else {
-                            return ps.split(/\s+/).some(token => token === s);
-                        }
-                    });
+                    return (p.sizes || []).some(ps => isAlpha ? ps === s : ps.split(/\s+/).some(token => token === s));
                 })) return false;
-                if (gender === 'other') {
-                    if (!p.isGenderless) return false;
-                } else {
-                    if (p.gender !== gender || p.isGenderless) return false;
-                }
-                return true;
-                
+                return gender === 'other' ? p.isGenderless : (p.gender === gender && !p.isGenderless);
             });
 
-            if (sortBy === 'price') filteredProducts.sort((a, b) => a.lowest - b.lowest);
-            else filteredProducts.sort((a, b) => b.discount - a.discount);
+            filteredProducts.sort((a, b) => sortBy === 'price' ? a.lowest - b.lowest : b.discount - a.discount);
 
             groupedData = getGroupedData(filteredProducts);
 
@@ -629,21 +609,17 @@
                     traverse(cats);
                 });
 
-                const brandList = document.getElementById('brand-list');
-                const uniqueBrand = [...new Set(allProducts.map(p => p.brand))].sort();
-                uniqueBrand.forEach(brand => {
-                    const option = document.createElement('option');
-                    option.value = brand;
-                    brandList.appendChild(option);
-                });
+                const populateDatalist = (listId, values) => {
+                    const list = document.getElementById(listId);
+                    values.forEach(value => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        list.appendChild(option);
+                    });
+                };
 
-                const colorList = document.getElementById('color-list');
-                const uniqueColor = [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort();
-                uniqueColor.forEach(color => {
-                    const option = document.createElement('option');
-                    option.value = color;
-                    colorList.appendChild(option);
-                });
+                populateDatalist('brand-list', [...new Set(allProducts.map(p => p.brand))].sort());
+                populateDatalist('color-list', [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort());
 
                 applyFiltersAndRender();
             } catch (error) {
@@ -748,16 +724,15 @@
                 arrow.innerHTML = direction === 'left' ? '&#10094;' : '&#10095;';
                 arrow.onclick = (e) => {
                     e.stopPropagation();
-                    let currentIndex = parseInt(wrapper.dataset.currentIndex, 10);
+                    const currentIndex = parseInt(wrapper.dataset.currentIndex, 10);
                     const totalImages = images.length;
-                    currentIndex = (direction === 'left') ? (currentIndex - 1 + totalImages) % totalImages : (currentIndex + 1) % totalImages;
-                    wrapper.dataset.currentIndex = currentIndex;
-                    wrapper.querySelector('img.product-thumbnail').src = images[currentIndex];
+                    const newIndex = (currentIndex + (direction === 'left' ? -1 : 1) + totalImages) % totalImages;
+                    wrapper.dataset.currentIndex = newIndex;
+                    wrapper.querySelector('img.product-thumbnail').src = images[newIndex];
                 };
                 wrapper.appendChild(arrow);
             };
-            createArrow('left');
-            createArrow('right');
+            ['left', 'right'].forEach(createArrow);
         }
     </script>
 </body>
