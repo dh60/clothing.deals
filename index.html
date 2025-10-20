@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>clothing.deals</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         :root {
-            --bg-color: #fff;
             --text-color: #333;
+            --bg-color: #fff;
             --accent-color: #07f;
             --border-color: #dee2e6;
             --stripe-color: #f8f9fa;
@@ -15,54 +20,43 @@
             --progress-bg: #e9ecef;
             --progress-bar: #007bff;
             --nested-border-color: #e9ecef;
+            --size: 100px;
         }
         body {
             font-family: var(--font-sans);
             background-color: var(--bg-color);
             color: var(--text-color);
-            margin: 0;
-            line-height: 1.2;
-            font-size: .85rem;
-            overflow-x: hidden;
+        }
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 400;
+            margin: .5rem;
+            text-align: center;
         }
         .site-header {
             position: sticky;
             top: 0;
             z-index: 100;
             background-color: var(--bg-color);
-            padding: 0;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 400;
-            margin: .5rem 0;
-            text-align: center;
         }
         form {
             display: flex;
             flex-wrap: wrap;
-            gap: .25rem;
+            gap: .3rem;
             padding: .5rem;
             background: var(--stripe-color);
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
-            align-items: flex-end;
             justify-content: center;
         }
         .filter-group {
             display: flex;
-            flex-wrap: nowrap;
-            gap: .25rem;
-            align-items: flex-end;
-        }
-        form > div {
-            flex: 0 0 auto;
-            min-width: 0;
+            gap: .3rem;
         }
         label {
             display: block;
-            font-size: .75rem;
+            font-size: .8rem;
             margin-bottom: .1rem;
             color: #495057;
             text-align: center;
@@ -73,7 +67,6 @@
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 0.9rem;
-            box-sizing: border-box;
             text-align: center;
             height: 1.5rem;
         }
@@ -96,7 +89,6 @@
         .group-header {
             cursor: pointer;
             padding: .3rem .5rem;
-            margin: 0;
             display: flex;
             align-items: center;
             border-bottom: 1px solid var(--border-color);
@@ -119,17 +111,89 @@
             border-collapse: collapse;
             font-size: .8rem;
             width: 100%;
-            table-layout: auto;
+            table-layout: fixed;
         }
         th,
         td {
-            padding: .2rem .3rem;
+            padding: .2rem;
             text-align: left;
             border-bottom: 1px solid var(--border-color);
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            vertical-align: middle;
+        }
+        td.product-name,
+        th.product-name {
+            width: 20vw;
+        }
+        td.brand-name,
+        th.brand-name {
+            width: 10vw;
+        }
+        td.sizes-cell {
+            width: 8vw;
+        }
+        td.price-cell,
+        th.price-cell {
+            width: 10vw;
+        }
+        td.discount,
+        th.discount {
+            width: 6vw;
+            text-align: center;
+        }
+        td.discount {
+            font-weight: 600;
+        }
+        td.image-cell {
+            width: var(--size);
+            height: var(--size);
+            position: relative;
+            overflow: visible;
+        }
+        .image-wrapper {
+            position: relative;
+            height: var(--size);
+            width: var(--size);
+        }
+        .product-thumbnail {
+            width: var(--size);
+            height: var(--size);
+            object-fit: contain;
+            cursor: pointer;
+            display: block;
+            border-radius: 3px;
+            background-color: transparent;
+        }
+        .image-wrapper.expanded {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            width: auto;
+            height: auto;
+            z-index: 10;
+        }
+        .image-wrapper.expanded .product-thumbnail {
+            width: auto;
+            height: auto;
+            max-width: 80vw;
+            max-height: 80vh;
+            border: 2px solid white;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            background-color: var(--bg-color);
+        }
+        .lazy-image-placeholder {
+            width: var(--size);
+            height: var(--size);
+            border-radius: 3px;
+            background-color: transparent;
+        }
+        td.description-cell {
+            width: 10vw;
+            white-space: normal;
+        }
+        .description-content {
+            max-height: 7em;
+            overflow: hidden;
         }
         th {
             background: var(--stripe-color);
@@ -137,22 +201,12 @@
             position: sticky;
             top: 0;
             z-index: 1;
-            text-align: left;
-        }
-        td.discount {
-            text-align: center;
-            font-weight: 700;
-            width: 60px;
         }
         tr:nth-child(even) {
             background: var(--stripe-color);
         }
         tr:hover {
             background: #e9ecef;
-        }
-        .spacer {
-            width: auto;
-            padding: 0;
         }
         a {
             color: var(--accent-color);
@@ -187,59 +241,6 @@
             100% {
                 transform: translateX(100%);
             }
-        }
-        td.image-cell {
-            width: 85px;
-            height: 84px;
-            padding: 2px;
-            position: relative;
-            overflow: visible;
-        }
-        .image-wrapper {
-            position: relative;
-            height: 80px;
-            width: 80px;
-        }
-        .product-thumbnail {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            cursor: pointer;
-            display: block;
-            border-radius: 3px;
-            background-color: transparent;
-        }
-        .lazy-image-placeholder {
-            width: 80px;
-            height: 80px;
-            border-radius: 3px;
-            background-color: transparent;
-        }
-        td.description-cell {
-            max-width: 250px;
-            white-space: normal;
-        }
-        .description-content {
-            max-height: 3.6em;
-            overflow: hidden;
-        }
-        .image-wrapper.expanded {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            width: auto;
-            height: auto;
-            z-index: 10;
-        }
-        .image-wrapper.expanded .product-thumbnail {
-            width: auto;
-            height: auto;
-            max-width: 80vw;
-            max-height: 80vh;
-            border: 2px solid white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-            background-color: var(--bg-color);
         }
         .image-nav-arrow {
             position: absolute;
@@ -454,11 +455,12 @@
                 const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
                 const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
                 const brand = p.brand || 'N/A';
+                const productName = p.name || '';
                 const imageUrl = p.images?.[0] || '';
                 const description = p.description || '';
                 const imageWrapperData = `data-images='${p.imagesJson}' data-current-index="0"`;
                 const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
-                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()">${p.name}</a></td><td style="width: 120px;">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td>${(p.sizes || []).join(', ')}</td><td>${salePrice}</td><td><s>${regularPrice}</s></td><td class="spacer"></td>`;
+                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td class="product-name"><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()" title="${p.name}">${productName}</a></td><td class="brand-name" title="${p.brand || 'N/A'}">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td class="sizes-cell">${(p.sizes || []).join(', ')}</td><td class="price-cell">${salePrice}</td><td class="price-cell"><s>${regularPrice}</s></td>`;
                 fragment.appendChild(tr);
             });
             tbody.appendChild(fragment);
@@ -539,7 +541,7 @@
 
                         if (products) {
                             const table = document.createElement('table');
-                            table.innerHTML = '<thead><tr><th class="image">Image</th><th style="width: 60px;">Discount</th><th>Product</th><th style="width: 120px;">Brand</th><th>Description</th><th style="width: 100px;">Sizes</th><th style="width: 60px;">Sale</th><th style="width: 60px;">Original</th><th class="spacer"></th></tr></thead>';
+                            table.innerHTML = '<thead><tr><th class="image">Image</th><th class="discount">Discount</th><th class="product-name">Product</th><th class="brand-name">Brand</th><th>Description</th><th class="sizes-cell">Sizes</th><th class="price-cell">Sale</th><th class="price-cell">Original</th></tr></thead>';
                             const tbody = document.createElement('tbody');
                             table.appendChild(tbody);
 
