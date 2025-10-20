@@ -112,8 +112,8 @@
             text-align: center;
             line-height: .8rem;
         }
-        .product-list {
-            border-left: 2px solid var(--nested-border-color);
+        .product-table {
+            border-left: 0.1rem solid var(--nested-border-color);
         }
         table {
             border-collapse: collapse;
@@ -470,7 +470,7 @@
                         subContainer.appendChild(header);
                         const tableContainer = document.createElement('div');
                         tableContainer.id = groupId;
-                        tableContainer.className = `product-list lazy-load-group ${isExpanded ? '' : 'hidden'}`;
+                        tableContainer.className = `product-table lazy-load-group ${isExpanded ? '' : 'hidden'}`;
                         tableContainer.style.marginLeft = level > 0 ? `${level}rem` : '0';
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
                         subContainer.appendChild(tableContainer);
