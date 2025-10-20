@@ -82,11 +82,11 @@
         select#sort_by {
             width: 6rem;
         }
-        input#brands {
+        input#brand {
             width: 9rem;
         }
-        input#sizes,
-        input#colors {
+        input#size,
+        input#color {
             width: 7rem;
         }
         input#min_price,
@@ -308,18 +308,18 @@
                     </select>
                 </div>
                 <div>
-                    <label for="sizes">Size</label>
-                    <input type="text" id="sizes" placeholder="XS, 32, 8.5...">
+                    <label for="size">Size</label>
+                    <input type="text" id="size" placeholder="XS, 32, 8.5...">
                 </div>
                 <div>
-                    <label for="brands">Brand</label>
-                    <input type="text" id="brands" placeholder="Nike, Gucci..." list="brand-list">
+                    <label for="brand">Brand</label>
+                    <input type="text" id="brand" placeholder="Nike, Gucci..." list="brand-list">
                 </div>
             </div>
             <div class="filter-group">
                 <div>
-                    <label for="colors">Color</label>
-                    <input type="text" id="colors" placeholder="Red, Black..." list="color-list">
+                    <label for="color">Color</label>
+                    <input type="text" id="color" placeholder="Red, Black..." list="color-list">
                 </div>
                 <div>
                     <label for="min_price">Min $</label>
@@ -559,10 +559,10 @@
                 document.querySelectorAll('[id^="group_"]:not(.hidden)').forEach(el => expandedGroupIds.add(el.id));
             }
 
-            const brands = document.getElementById('brands').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-            const sizesInput = document.getElementById('sizes').value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
-            const colors = document.getElementById('colors').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-            const sizes = sizesInput.map(s => {
+            const brand = document.getElementById('brand').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+            const sizeInput = document.getElementById('size').value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
+            const color = document.getElementById('color').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+            const size = sizeInput.map(s => {
                 if (/\d/.test(s) && /[a-zA-Z]/.test(s)) {
                     return s.replace(/[^0-9.]/g, '');
                 }
@@ -577,9 +577,9 @@
             filteredProducts = allProducts.filter(p => {
                 if (p.discount < minDiscount) return false;
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
-                if (brands.length && (!p.brand || !brands.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
-                if (colors.length && (!p.color || !colors.some(c => p.color.toLowerCase().includes(c)))) return false;
-                if (sizes.length && !sizes.some(s => {
+                if (brand.length && (!p.brand || !brand.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
+                if (color.length && (!p.color || !color.some(c => p.color.toLowerCase().includes(c)))) return false;
+                if (size.length && !size.some(s => {
                     const isAlpha = /^[A-Z]+$/i.test(s);
                     return (p.sizes || []).some(ps => {
                         if (isAlpha) {
@@ -645,16 +645,16 @@
                 });
 
                 const brandList = document.getElementById('brand-list');
-                const uniqueBrands = [...new Set(allProducts.map(p => p.brand))].sort();
-                uniqueBrands.forEach(brand => {
+                const uniqueBrand = [...new Set(allProducts.map(p => p.brand))].sort();
+                uniqueBrand.forEach(brand => {
                     const option = document.createElement('option');
                     option.value = brand;
                     brandList.appendChild(option);
                 });
 
                 const colorList = document.getElementById('color-list');
-                const uniqueColors = [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort();
-                uniqueColors.forEach(color => {
+                const uniqueColor = [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort();
+                uniqueColor.forEach(color => {
                     const option = document.createElement('option');
                     option.value = color;
                     colorList.appendChild(option);
