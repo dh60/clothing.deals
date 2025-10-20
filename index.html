@@ -36,9 +36,8 @@
         h1 {
             font-size: 1.5rem;
             font-weight: 400;
-            margin: 0 0 .5rem;
+            margin: .5rem 0;
             text-align: center;
-            padding-top: .5rem;
         }
         form {
             display: flex;
@@ -121,20 +120,19 @@
         .group-level-1 {
             font-weight: 500;
             background: #fff;
-            margin-left: 1.5rem;
+            margin-left: 1rem;
         }
         .group-level-2 {
             font-weight: 400;
             background: var(--stripe-color);
-            margin-left: 3rem;
+            margin-left: 2rem;
         }
         .group-level-3 {
             font-weight: 400;
             background: #fff;
-            margin-left: 4.5rem;
+            margin-left: 3rem;
         }
         .product-list {
-            margin-left: 4.5rem;
             padding-left: .5rem;
             border-left: 2px solid var(--nested-border-color);
         }
@@ -293,8 +291,8 @@
     </style>
 </head>
 <body>
+    <h1>clothing.deals</h1>
     <header class="site-header">
-        <h1>clothing.deals</h1>
         <div class="progress-container" id="progress-container">
             <div class="progress-bar"></div>
         </div>
@@ -490,7 +488,7 @@
                         subContainer.appendChild(header);
                         const tableContainer = document.createElement('div');
                         tableContainer.id = groupId;
-                        tableContainer.className = `product-list lazy-load-group ${isExpanded ? '' : 'hidden'}`;
+                        tableContainer.className = `product-list group-level-${level} lazy-load-group ${isExpanded ? '' : 'hidden'}`;
                         tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
                         subContainer.appendChild(tableContainer);
                     } else {
