@@ -82,9 +82,12 @@
         select#sort_by {
             width: 6rem;
         }
-        input#brands,
-        input#sizes {
-            width: 8rem;
+        input#brands {
+            width: 9rem;
+        }
+        input#sizes,
+        input#colors {
+            width: 7rem;
         }
         input#min_price,
         input#max_price,
@@ -305,15 +308,19 @@
                     </select>
                 </div>
                 <div>
-                    <label for="brands">Brand</label>
-                    <input type="text" id="brands" placeholder="Versace, Gucci..." list="brand-list">
-                </div>
-                <div>
                     <label for="sizes">Size</label>
                     <input type="text" id="sizes" placeholder="XS, 32, 8.5...">
                 </div>
+                <div>
+                    <label for="brands">Brand</label>
+                    <input type="text" id="brands" placeholder="Nike, Gucci..." list="brand-list">
+                </div>
             </div>
             <div class="filter-group">
+                <div>
+                    <label for="colors">Color</label>
+                    <input type="text" id="colors" placeholder="Red, Black..." list="color-list">
+                </div>
                 <div>
                     <label for="min_price">Min $</label>
                     <input type="text" id="min_price" maxlength="4" pattern="[0-9]*">
@@ -337,6 +344,7 @@
         </form>
     </header>
     <datalist id="brand-list"></datalist>
+    <datalist id="color-list"></datalist>
     <div id="nested-list"></div>
     <script>
         let allProducts = [],
@@ -553,6 +561,7 @@
 
             const brands = document.getElementById('brands').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
             const sizesInput = document.getElementById('sizes').value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean);
+            const colors = document.getElementById('colors').value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
             const sizes = sizesInput.map(s => {
                 if (/\d/.test(s) && /[a-zA-Z]/.test(s)) {
                     return s.replace(/[^0-9.]/g, '');
@@ -569,6 +578,7 @@
                 if (p.discount < minDiscount) return false;
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
                 if (brands.length && (!p.brand || !brands.some(b => p.brand.toLowerCase().startsWith(b)))) return false;
+                if (colors.length && (!p.color || !colors.some(c => p.color.toLowerCase().includes(c)))) return false;
                 if (sizes.length && !sizes.some(s => {
                     const isAlpha = /^[A-Z]+$/i.test(s);
                     return (p.sizes || []).some(ps => {
@@ -585,6 +595,7 @@
                     if (p.gender !== gender || p.isGenderless) return false;
                 }
                 return true;
+                
             });
 
             if (sortBy === 'price') filteredProducts.sort((a, b) => a.lowest - b.lowest);
@@ -640,6 +651,15 @@
                     option.value = brand;
                     brandList.appendChild(option);
                 });
+
+                const colorList = document.getElementById('color-list');
+                const uniqueColors = [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort();
+                uniqueColors.forEach(color => {
+                    const option = document.createElement('option');
+                    option.value = color;
+                    colorList.appendChild(option);
+                });
+
                 applyFiltersAndRender();
             } catch (error) {
                 console.error('Failed to fetch product data:', error);
@@ -650,7 +670,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const debouncedApplyFilters = debounce(applyFiltersAndRender, 350);
+            const debouncedApplyFilters = debounce(applyFiltersAndRender, 200);
             document.querySelectorAll('#filters select, #filters input').forEach(el => {
                 el.addEventListener('change', applyFiltersAndRender);
                 el.addEventListener('input', debouncedApplyFilters);
