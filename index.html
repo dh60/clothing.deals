@@ -120,15 +120,15 @@
             border-bottom: 1px solid var(--border-color);
             overflow: hidden;
         }
-        td.product-name,
-        th.product-name {
+        td.name,
+        th.name {
             width: 20vw;
         }
-        td.brand-name,
-        th.brand-name {
+        td.brand,
+        th.brand {
             width: 10vw;
         }
-        td.sizes-cell {
+        td.sizes {
             width: 8vw;
         }
         td.price-cell,
@@ -143,7 +143,7 @@
         td.discount {
             font-weight: 600;
         }
-        td.image-cell {
+        td.image {
             width: var(--size);
             height: var(--size);
             position: relative;
@@ -460,7 +460,7 @@
                 const description = p.description || '';
                 const imageWrapperData = `data-images='${p.imagesJson}' data-current-index="0"`;
                 const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
-                tr.innerHTML = `<td class="image-cell">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td class="product-name"><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()" title="${p.name}">${productName}</a></td><td class="brand-name" title="${p.brand || 'N/A'}">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td class="sizes-cell">${(p.sizes || []).join(', ')}</td><td class="price-cell">${salePrice}</td><td class="price-cell"><s>${regularPrice}</s></td>`;
+                tr.innerHTML = `<td class="image">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td class="name"><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()" title="${p.name}">${productName}</a></td><td class="brand" title="${p.brand || 'N/A'}">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td class="sizes">${(p.sizes || []).join(', ')}</td><td class="price-cell">${salePrice}</td><td class="price-cell"><s>${regularPrice}</s></td>`;
                 fragment.appendChild(tr);
             });
             tbody.appendChild(fragment);
@@ -541,7 +541,7 @@
 
                         if (products) {
                             const table = document.createElement('table');
-                            table.innerHTML = '<thead><tr><th class="image">Image</th><th class="discount">Discount</th><th class="product-name">Product</th><th class="brand-name">Brand</th><th>Description</th><th class="sizes-cell">Sizes</th><th class="price-cell">Sale</th><th class="price-cell">Original</th></tr></thead>';
+                            table.innerHTML = '<thead><tr><th class="image">Image</th><th class="discount">Discount</th><th class="name">Product</th><th class="brand">Brand</th><th>Description</th><th class="sizes">Sizes</th><th class="price-cell">Sale</th><th class="price-cell">Original</th></tr></thead>';
                             const tbody = document.createElement('tbody');
                             table.appendChild(tbody);
 
@@ -603,13 +603,9 @@
             // Order filters by selectivity (most selective first) for early short-circuit
             // Now filtering the smaller gender-filtered subset instead of all 100k products
             filteredProducts = genderFilteredProducts.filter(p => {
-                // Brand is most selective
                 if (hasBrandFilter && (!p.brandLower || !brand.some(b => p.brandLower.startsWith(b)))) return false;
-                // Size is second most selective
                 if (hasSizeFilter && !size.some(s => (p.sizes || []).includes(s))) return false;
-                // Color is third most selective
                 if (hasColorFilter && (!p.colorLower || !color.some(c => p.colorLower.includes(c)))) return false;
-                // Price and discount are less selective (checked last)
                 if (p.lowest < minPrice || p.lowest > maxPrice) return false;
                 if (p.discount < minDiscount) return false;
                 return true;
