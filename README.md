@@ -2,14 +2,14 @@
 
 ![clothing.deals interface](screenshots/interface.png)
 
-An automated web scraper and interactive front-end designed to find the best clothing sales across multiple retailers. This tool efficiently scrapes hundreds of thousands of products, handles anti-bot measures, and presents the data in a fast and user-friendly interface inspired by [RockAuto](https://www.rockauto.com).
+A high-performance web scraper and single-page application for browsing clothing deals. Scrapes thousands of products concurrently and provides an instantaneously filterable interface for finding deals.
 
 ## Key Features
 
--   **High-Performance Scraping**: Built with `asyncio` and `Patchright` to scrape thousands of items concurrently, stealthily, and efficiently.
--   **Efficient Data Collection**: Unlike other scrapers, clothing.deals gets the goods directly from the .json source.
--   **CAPTCHA Handling**: On the rare occasion a CAPTCHA is detected, clothing.deals pauses to allow the user to solve it, before automatically resuming.
--   **Dynamic & Responsive Frontend**: A pure JavaScript interface that filters, sorts, and groups data instantly without page reloads.
+-   **High-Performance Scraping**: Built with `asyncio` and `Patchright` to scrape thousands of products simultaneously.
+-   **Direct JSON Extraction**: Fetches product data directly from JSON endpoints via browser-based fetch calls, bypassing HTML parsing.
+-   **Optimized Data Storage**: Uses Brotli compression to store product and category data efficiently.
+-   **Fast Filtering Frontend**: Pure JavaScript single-page app with zero dependencies. Features lazy-loading product tables, inline image viewing, and instant search across brand, size, color, price, and discount.
 
 ## Usage
 ![clothing.deals terminal](screenshots/terminal.png)
@@ -20,7 +20,7 @@ An automated web scraper and interactive front-end designed to find the best clo
 python ssense.py
 ```
 
--   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then the script will automatically resume.
+-   **Important**: If a CAPTCHA is detected, a Chrome browser window will open. You must solve the CAPTCHA, then press enter in the terminal to resume.
 
 #### Step 2: Run the server and view the app.
 
