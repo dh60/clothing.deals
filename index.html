@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width">
@@ -14,8 +14,8 @@
             box-sizing: border-box;
         }
         :root {
-            --border: #dee2e6;
-            --stripe: #f8f9fa;
+            --lightgrey: #f9f9f9;
+            --darkgrey: #dddddd;
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -34,7 +34,7 @@
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            background: var(--stripe);
+            background: var(--lightgrey);
             padding: .5rem;
             gap: .5rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
@@ -52,7 +52,7 @@
         select {
             height: 1.5rem;
             width: 6rem;
-            border: 1px solid var(--border);
+            border: 1px solid var(--darkgrey);
             border-radius: 5px;
             font-size: .9rem;
             text-align: center;
@@ -74,10 +74,10 @@
             display: flex;
             align-items: center;
             padding: .2rem;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid var(--darkgrey);
         }
         #catalog span:hover {
-            background: #e9ecef;
+            background: var(--darkgrey);
         }
         #catalog .toggle {
             border: none;
@@ -97,10 +97,9 @@
         }
         #catalog th,
         #catalog td {
-            background: var(--stripe);
             padding: .5rem;
             text-align: left;
-            border: 1px solid var(--border);
+            border: 1px solid var(--darkgrey);
             border-top: none;
             vertical-align: middle;
         }
@@ -109,9 +108,7 @@
         }
         #catalog td {
             word-break: break-word;
-        }
-        #catalog tr:hover {
-            background: var(--stripe);
+            hyphens: auto;
         }
         #catalog img {
             max-width: 100px;
@@ -139,7 +136,6 @@
             cursor: pointer;
             max-width: 90vw;
             max-height: 90vh;
-            object-fit: contain;
             box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
     </style>
