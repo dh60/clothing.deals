@@ -1,9 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width">
     <title>clothing.deals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,815 +14,412 @@
             box-sizing: border-box;
         }
         :root {
-            --text-color: #333;
-            --bg-color: #fff;
-            --accent-color: #07f;
-            --border-color: #dee2e6;
-            --stripe-color: #f8f9fa;
-            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            --progress-bg: #e9ecef;
-            --progress-bar: #007bff;
-            --nested-border-color: #e9ecef;
-            --size: 100px;
+            --border: #dee2e6;
+            --stripe: #f8f9fa;
         }
         body {
-            font-family: var(--font-sans);
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
         }
         h1 {
             font-size: 1.5rem;
             font-weight: 400;
+            letter-spacing: -.07rem;
             margin: .5rem;
             text-align: center;
         }
-        .site-header {
+        header {
             position: sticky;
             top: 0;
-            z-index: 100;
-            background-color: var(--bg-color);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-        form {
+            z-index: 2;
             display: flex;
             flex-wrap: wrap;
-            gap: .3rem;
-            padding: .5rem;
-            background: var(--stripe-color);
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
             justify-content: center;
+            background: var(--stripe);
+            padding: .5rem;
+            gap: .5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
         }
-        .filter-group {
+        .filters {
             display: flex;
-            gap: .3rem;
+            gap: .5rem;
         }
         label {
             display: block;
-            font-size: .8rem;
-            margin-bottom: .1rem;
-            color: #495057;
             text-align: center;
+            font-size: .8rem;
         }
         input,
         select {
-            padding: .3rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 0.9rem;
-            text-align: center;
             height: 1.5rem;
-        }
-        select#gender,
-        select#sort_by {
             width: 6rem;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: .9rem;
+            text-align: center;
         }
-        input#brand {
-            width: 9rem;
-        }
-        input#size,
-        input#color {
-            width: 7rem;
+        input#brand,
+        input#size {
+            width: 8rem;
         }
         input#min_price,
         input#max_price,
-        input#min_discount {
+        input#discount {
             width: 3rem;
         }
-        .group-header {
-            cursor: pointer;
-            padding: .3rem .5rem;
-            display: flex;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .group-header:hover {
-            background: #e9ecef;
-        }
-        .group-header .toggle {
-            width: .8rem;
-            height: .8rem;
-            margin-right: .4rem;
-            font-size: .7rem;
-            text-align: center;
-            line-height: .8rem;
-        }
-        .product-table {
-            border-left: 2px solid var(--nested-border-color);
-        }
-        table {
-            border-collapse: collapse;
-            font-size: .9rem;
-            width: 100%;
-            table-layout: fixed;
-        }
-        th,
-        td {
-            padding: .2rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-        td.name,
-        th.name {
-            width: 20vw;
-        }
-        td.brand,
-        th.brand {
-            width: 10vw;
-        }
-        td.sizes {
-            width: 8vw;
-        }
-        td.price-cell,
-        th.price-cell {
-            width: 60px;
-        }
-        td.discount,
-        th.discount {
-            width: 6vw;
-            text-align: center;
-        }
-        td.discount {
-            font-weight: 600;
-        }
-        td.image {
-            width: var(--size);
-            height: var(--size);
-            position: relative;
-            overflow: visible;
-        }
-        .image-wrapper {
-            position: relative;
-            height: var(--size);
-            width: var(--size);
-        }
-        .product-thumbnail {
-            width: var(--size);
-            height: var(--size);
-            object-fit: contain;
-            cursor: pointer;
-            display: block;
-            border-radius: 3px;
-            background-color: transparent;
-        }
-        .image-wrapper.expanded {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            width: auto;
-            height: auto;
-            z-index: 10;
-        }
-        .image-wrapper.expanded .product-thumbnail {
-            width: auto;
-            height: auto;
-            max-width: 80vw;
-            max-height: 80vh;
-            border: 2px solid white;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-            background-color: var(--bg-color);
-        }
-        .lazy-image-placeholder {
-            width: var(--size);
-            height: var(--size);
-            border-radius: 3px;
-            background-color: transparent;
-        }
-        td.description-cell {
-            width: 10vw;
-            white-space: pre-wrap;
-        }
-        .description-content {
-            max-height: 6em;
-            overflow: hidden;
-        }
-        th {
-            background: var(--stripe-color);
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        .image-nav-arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            z-index: 11;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            border: none;
-            padding: 10px 8px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 4px;
-        }
-        .image-nav-arrow:hover {
-            background-color: rgba(0, 0, 0, 0.8);
-        }
-        .image-nav-arrow.left {
-            left: 5px;
-        }
-        .image-nav-arrow.right {
-            right: 5px;
-        }
-                tr:nth-child(even) {
-            background: var(--stripe-color);
-        }
-        tr:hover {
-            background: #e9ecef;
-        }
-        a {
-            color: var(--accent-color);
+        #catalog a {
             text-decoration: none;
         }
-        a:hover {
-            text-decoration: underline;
+        #catalog span {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding: .2rem;
+            border-bottom: 1px solid var(--border);
         }
-        .hidden {
-            display: none;
+        #catalog span:hover {
+            background: #e9ecef;
         }
-        .progress-container {
-            width: 100%;
-            max-width: 400px;
-            height: 4px;
-            background: var(--progress-bg);
-            border-radius: 2px;
-            margin: .5rem auto;
-            overflow: hidden;
-            display: none;
+        #catalog .toggle {
+            border: none;
         }
-        .progress-bar {
-            width: 100%;
-            height: 100%;
-            background: var(--progress-bar);
-            animation: indeterminate 1.5s linear infinite;
+        #catalog > ul,
+        #catalog ul ul {
+            list-style: none;
         }
-        @keyframes indeterminate {
-            0% {
-                transform: translateX(-100%);
-            }
-            100% {
-                transform: translateX(100%);
-            }
+        #catalog ul ul {
+            margin-left: 1rem;
         }
-        .load-sentinel {
-            height: 50px;
+        #catalog table {
+            max-width: 100%;
+            border-collapse: collapse;
+            font-size: .8rem;
+            table-layout: fixed;
+        }
+        #catalog th,
+        #catalog td {
+            background: var(--stripe);
+            padding: .5rem;
+            text-align: left;
+            border: 1px solid var(--border);
+            border-top: none;
+            vertical-align: middle;
+        }
+        #catalog th {
+            font-weight: 500;
+        }
+        #catalog td {
+            word-break: break-word;
+        }
+        #catalog tr:hover {
+            background: var(--stripe);
+        }
+        #catalog img {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            cursor: pointer;
+        }
+        .table-image,
+        .table-sale,
+        .table-regular,
+        .table-discount {
+            text-align: center !important;
+            padding: 0 !important;
+        }
+        .table-sale,
+        .table-regular,
+        .table-discount {
+            width: 50px;
+        }
+        td.table-discount {
+            font-weight: 700;
+        }
+        .image-overlay {
+            position: absolute;
+            cursor: pointer;
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
     </style>
 </head>
 <body>
     <h1>clothing.deals</h1>
-    <header class="site-header">
-        <div class="progress-container" id="progress-container">
-            <div class="progress-bar"></div>
+    <header>
+        <div class="filters">
+            <div>
+                <label for="gender">Gender</label>
+                <select id="gender">
+                    <option value="men">Men</option>
+                    <option value="women">Women</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label for="size">Size</label>
+                <input id="size" type="text" placeholder="XS, 32, 8.5...">
+            </div>
+            <div>
+                <label for="brand">Brand</label>
+                <input id="brand" type="text" placeholder="Nike, Burberry...">
+            </div>
         </div>
-        <form id="filters" onsubmit="return false;">
-            <div class="filter-group">
-                <div>
-                    <label for="gender">Gender</label>
-                    <select id="gender">
-                        <option value="men">Men</option>
-                        <option value="women">Women</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="size">Size</label>
-                    <input type="text" id="size" placeholder="XS, 32, 8.5...">
-                </div>
-                <div>
-                    <label for="brand">Brand</label>
-                    <input type="text" id="brand" placeholder="Nike, Burberry..." list="brand-list">
-                </div>
+        <div class="filters">
+            <div>
+                <label for="color">Color</label>
+                <input id="color" type="text" placeholder="Red, Black...">
             </div>
-            <div class="filter-group">
-                <div>
-                    <label for="color">Color</label>
-                    <input type="text" id="color" placeholder="Red, Black..." list="color-list">
-                </div>
-                <div>
-                    <label for="min_price">Min $</label>
-                    <input type="text" id="min_price" maxlength="4" pattern="[0-9]*">
-                </div>
-                <div>
-                    <label for="max_price">Max $</label>
-                    <input type="text" id="max_price" maxlength="4" pattern="[0-9]*">
-                </div>
-                <div>
-                    <label for="min_discount">Min %</label>
-                    <input type="text" id="min_discount" maxlength="2" pattern="[0-9]*">
-                </div>
-                <div>
-                    <label for="sort_by">Sort By</label>
-                    <select id="sort_by">
-                        <option value="discount">Discount</option>
-                        <option value="price">Price</option>
-                    </select>
-                </div>
+            <div>
+                <label for="min_price">Min $</label>
+                <input id="min_price" type="text" inputmode="numeric" maxlength="4">
             </div>
-        </form>
+            <div>
+                <label for="max_price">Max $</label>
+                <input id="max_price" type="text" inputmode="numeric" maxlength="4">
+            </div>
+            <div>
+                <label for="discount">Min %</label>
+                <input id="discount" type="text" inputmode="numeric" maxlength="2">
+            </div>
+            <div>
+                <label for="sort">Sort By</label>
+                <select id="sort">
+                    <option value="discount">Discount</option>
+                    <option value="price">Price</option>
+                </select>
+            </div>
+        </div>
     </header>
-    <datalist id="brand-list"></datalist>
-    <datalist id="color-list"></datalist>
-    <div id="nested-list"></div>
+    <div id="catalog"></div>
     <script>
-        let allProducts = [],
-            filteredProducts = [],
-            groupedData = {};
-        let isInitialLoad = true,
-            groupObserver,
-            sentinelObserver;
-        let expandedGroupIds = new Set();
-        const CHUNK_SIZE = 50;
-        let sectionToCatMap = {};
-        // Gender pre-filtering cache
+        let categories, products;
         let genderFilteredProducts = [];
+        let currentlyFilteredProducts = [];
         let lastGender = '';
-        // Track last filtered results to avoid unnecessary re-renders
-        let lastFilteredProductIds = '';
-
-        function debounce(func, delay) {
-            let timeout;
-            return (...args) => {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(this, args), delay);
-            };
-        }
-
-        function toggleSection(id) {
-            const el = document.getElementById(id);
-            if (!el) return;
-            const isHidden = el.classList.toggle('hidden');
-            const toggleIcon = document.querySelector(`[data-toggle="${id}"]`);
-            if (toggleIcon) toggleIcon.textContent = isHidden ? '+' : '−';
-
-            // Track expanded state
-            if (isHidden) {
-                expandedGroupIds.delete(id);
-            } else {
-                expandedGroupIds.add(id);
-            }
-        }
-
-        function getCategoryPath(p) {
-            const section = p.isGenderless ? 'everything-else' : p.gender;
-            const catMap = sectionToCatMap[section];
-            if (!catMap) return ['Unknown'];
-            const names = p.allCategoryIds.map(id => catMap[Number(id)]?.name || 'Unknown');
-            return names.length ? names : ['Uncategorized'];
-        }
-
-        const deepGet = (obj, path) => path.reduce((xs, x) => (xs && xs[x]) ? xs[x] : null, obj);
-
-        function getSizeSortValue(size) {
-            // For numeric sizes, return the number
-            const num = parseFloat(size);
-            if (!isNaN(num)) return num;
-
-            // For letter sizes: XXXS -> XXS -> XS -> S -> M -> L -> XL -> XXL -> XXXL
-            const upper = size.toUpperCase();
-
-            // Special cases
-            if (upper === 'ONE SIZE' || upper === 'OS') return 1000; // Put at end
-            if (upper === 'M') return 100; // Medium in the middle
-
-            // Count X's and check if it ends with S or L
-            const xCount = (upper.match(/X/g) || []).length;
-            if (upper.endsWith('S')) {
-                // Smaller sizes: more X's = smaller (XXXS=97, XXS=98, XS=99, S=100)
-                return 100 - xCount - 1;
-            } else if (upper.endsWith('L')) {
-                // Larger sizes: more X's = larger (L=101, XL=102, XXL=103, XXXL=104)
-                return 100 + xCount + 1;
-            }
-
-            // Unknown format, put at end
-            return 2000;
-        }
-
-        function getGroupedData(products) {
-            let groups = {};
-            const deepSet = (obj, path, value) => {
-                let current = obj;
-                // Navigate to the parent of the final segment
-                for (let i = 0; i < path.length - 1; i++) {
-                    const segment = path[i];
-                    if (!current[segment]) {
-                        current[segment] = {};
-                    }
-                    if (Array.isArray(current[segment])) return; // Can't traverse into arrays
-                    current = current[segment];
-                }
-                // Initialize final segment as array if needed, then push
-                const lastSegment = path[path.length - 1];
-                if (!current[lastSegment]) {
-                    current[lastSegment] = [];
-                }
-                if (Array.isArray(current[lastSegment])) {
-                    current[lastSegment].push(value);
-                }
-            };
-
-            products.forEach(p => {
-                // Use pre-computed category path
-                deepSet(groups, p.categoryPath, p);
-
-                // Add product to 'ALL' subcategories at each level
-                // For path ['Men', 'Clothing', 'Shirts'], creates:
-                // ['Men', 'ALL'] and ['Men', 'Clothing', 'ALL']
-                // Build path incrementally to avoid array spreading
-                const allPath = [];
-                for (let i = 0; i < p.categoryPath.length - 1; i++) {
-                    allPath.push(p.categoryPath[i]);
-                    if (p.categoryPath[i] !== 'ALL') {
-                        allPath.push('ALL');
-                        deepSet(groups, allPath, p);
-                        allPath.pop(); // Remove 'ALL' for next iteration
-                    }
-                }
+    
+        // Load and pre-process data
+        Promise.all([
+            fetch('/categories.json.br').then(r => r.json()),
+            fetch('/products.json.br').then(r => r.json())
+        ]).then(([c, p]) => {
+            categories = c;
+            // Pre-compute normalized fields for fast filtering
+            products = p.map(product => {
+                // Clean sizes: remove country codes and type prefixes
+                const cleanedSizes = (product.sizes || []).map(size => {
+                    return size.match(/[\d.]+/)?.[0] || size.trim();
+                });
+                return {
+                    ...product,
+                    _brand: product.brand.toLowerCase(),
+                    _color: (product.color || '').toLowerCase(),
+                    _sizes: cleanedSizes.map(s => s.toLowerCase()),
+                    sizes: cleanedSizes
+                };
             });
-
-            // Don't sort here - let renderLevel handle sorting at render time
-            return groups;
-        }
-
-        function appendTableRows(tbody, products, startIndex, count) {
-            const productsToShow = products.slice(startIndex, startIndex + count);
-            const fragment = document.createDocumentFragment();
-            productsToShow.forEach(p => {
-                const tr = document.createElement('tr');
-                const hue = Math.min(p.discount / 90, 1) * 120;
-                const salePrice = p.lowest ? `$${Math.round(p.lowest)}` : '-';
-                const regularPrice = p.regular ? `$${Math.round(p.regular)}` : '-';
-                const brand = p.brand || 'N/A';
-                const productName = p.name || '';
-                const imageUrl = p.images?.[0] || '';
-                const description = p.description || '';
-                const imageWrapperData = `data-images='${p.imagesJson}' data-current-index="0"`;
-                const imageContent = `<div class="image-wrapper" ${imageWrapperData}>${imageUrl ? `<img src="${imageUrl}" class="product-thumbnail" loading="lazy" alt="${p.name}">` : '<div class="lazy-image-placeholder"></div>'}</div>`;
-                tr.innerHTML = `<td class="image">${imageContent}</td><td class="discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td><td class="name"><a href="${p.url || '#'}" target="_blank" onclick="event.stopPropagation()" title="${p.name}">${productName}</a></td><td class="brand" title="${p.brand || 'N/A'}">${brand}</td><td class="description-cell" title="${description}"><div class="description-content">${p.descriptionEscaped}</div></td><td class="sizes">${(p.sizes || []).join(', ')}</td><td class="price-cell">${salePrice}</td><td class="price-cell"><s>${regularPrice}</s></td>`;
-                fragment.appendChild(tr);
-            });
-            tbody.appendChild(fragment);
-        }
-
-        function renderSkeletonUI() {
-            const container = document.getElementById('nested-list');
-            container.innerHTML = '';
-            if (Object.keys(groupedData).length === 0) {
-                container.innerHTML = '<p style="text-align:center; padding: 2rem;">No products match your criteria.</p>';
+    
+            applyFilters();
+            renderCatalog();
+        });
+    
+        // Event delegation for catalog clicks
+        catalog.onclick = e => {
+            // Handle image clicks - create overlay
+            if (e.target.tagName === 'IMG' && e.target.closest('#catalog')) {
+                const img = e.target;
+                document.querySelector('.image-overlay')?.remove();
+                const overlay = document.createElement('img');
+                overlay.src = img.src;
+                overlay.className = 'image-overlay';
+                overlay.onclick = (e) => {
+                    e.stopPropagation();
+                    overlay.remove();
+                };
+                document.body.appendChild(overlay);
+                const closeOverlay = (e) => {
+                    if (e.target !== overlay) {
+                        overlay.remove();
+                        document.removeEventListener('click', closeOverlay);
+                    }
+                };
+                setTimeout(() => {
+                    document.addEventListener('click', closeOverlay);
+                }, 0);
+                requestAnimationFrame(() => {
+                    const rect = img.getBoundingClientRect();
+                    const overlayRect = overlay.getBoundingClientRect();
+                    const header = document.querySelector('header');
+                    const headerHeight = header.getBoundingClientRect().height;
+                    const scrollY = window.scrollY;
+                    const h1Height = document.querySelector('h1').getBoundingClientRect().height;
+                    const viewportWidth = window.innerWidth;
+                    const viewportHeight = window.innerHeight;
+                    let left = rect.left;
+                    let top = rect.top + scrollY + (rect.height / 2) - (overlayRect.height / 2);
+                    if (left + overlayRect.width > viewportWidth) {
+                        left = viewportWidth - overlayRect.width;
+                    }
+                    if (left < 0) left = 0;
+                    const minTop = scrollY + headerHeight;
+                    const maxTop = scrollY + viewportHeight - overlayRect.height;
+                    if (top < minTop) {
+                        top = minTop;
+                    } else if (top > maxTop) {
+                        top = maxTop;
+                    }
+                    overlay.style.left = left + 'px';
+                    overlay.style.top = top + 'px';
+                });
                 return;
             }
-
-            const createHeader = (level, groupId, toggleIcon, content) => {
-                const header = document.createElement('div');
-                header.className = 'group-header';
-                header.style.marginLeft = `${level}rem`;
-                header.style.fontWeight = level === 0 ? '600' : level === 1 ? '500' : '400';
-                header.style.background = level % 2 === 0 ? 'var(--stripe-color)' : '#fff';
-                header.onclick = () => toggleSection(groupId);
-                header.innerHTML = `<span class="toggle" data-toggle="${groupId}">${toggleIcon}</span> ${content}`;
-                return header;
-            };
-
-            const renderLevel = (subContainer, data, level, pathPrefix) => {
-                // Always sort keys: 'ALL' first, then alphabetically
-                const sortedKeys = Object.keys(data).sort((a, b) => {
-                    if (a === 'ALL') return -1;
-                    if (b === 'ALL') return 1;
-                    return a.localeCompare(b);
-                });
-
-                const fragment = document.createDocumentFragment();
-                sortedKeys.forEach(key => {
-                    const value = data[key];
-                    const currentPathArray = [...pathPrefix, key];
-                    const groupId = 'group_' + btoa(JSON.stringify(currentPathArray));
-                    const isExpanded = expandedGroupIds.has(groupId);
-                    const toggleIcon = isExpanded ? '−' : '+';
-
-                    if (Array.isArray(value)) {
-                        const header = createHeader(level, groupId, toggleIcon, `${key} (${value.length})`);
-                        fragment.appendChild(header);
-                        const tableContainer = document.createElement('div');
-                        tableContainer.id = groupId;
-                        tableContainer.className = `product-table lazy-load-group ${isExpanded || 'hidden'}`;
-                        tableContainer.style.marginLeft = `${level}rem`;
-                        tableContainer.dataset.groupKey = JSON.stringify(currentPathArray);
-                        fragment.appendChild(tableContainer);
-                    } else {
-                        // Non-leaf nodes always have an ALL subcategory with all descendant products
-                        const childProductCount = value.ALL.length;
-                        const header = createHeader(level, groupId, toggleIcon, `${key} (${childProductCount})`);
-                        fragment.appendChild(header);
-                        const innerContainer = document.createElement('div');
-                        innerContainer.id = groupId;
-                        innerContainer.className = isExpanded || 'hidden';
-                        fragment.appendChild(innerContainer);
-                        renderLevel(innerContainer, value, level + 1, currentPathArray);
-                    }
-                });
-                subContainer.appendChild(fragment);
-            };
-            renderLevel(container, groupedData, 0, []);
-        }
-
-        function setupGroupObserver() {
-            if (groupObserver) groupObserver.disconnect();
-            const groupsToLoad = document.querySelectorAll('.lazy-load-group');
-            if (groupsToLoad.length === 0) return;
-
-            groupObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const container = entry.target;
-                        const groupKeyPath = JSON.parse(container.dataset.groupKey);
-                        const products = deepGet(groupedData, groupKeyPath);
-
-                        if (products) {
-                            const table = document.createElement('table');
-                            table.innerHTML = '<thead><tr><th class="image">Image</th><th class="discount">Discount</th><th class="name">Product</th><th class="brand">Brand</th><th>Description</th><th class="sizes">Sizes</th><th class="price-cell">Sale</th><th class="price-cell">Original</th></tr></thead>';
-                            const tbody = document.createElement('tbody');
-                            table.appendChild(tbody);
-
-                            appendTableRows(tbody, products, 0, CHUNK_SIZE);
-                            container.appendChild(table);
-
-                            if (products.length > CHUNK_SIZE) {
-                                const sentinel = document.createElement('div');
-                                sentinel.className = 'load-sentinel';
-                                sentinel.dataset.groupKey = container.dataset.groupKey;
-                                sentinel.dataset.nextIndex = CHUNK_SIZE;
-                                container.appendChild(sentinel);
-                                sentinelObserver.observe(sentinel);
-                            }
-                        }
-                        container.classList.remove('lazy-load-group');
-                        observer.unobserve(container);
-                    }
-                });
-            }, {
-                rootMargin: '200px'
-            });
-            groupsToLoad.forEach(group => groupObserver.observe(group));
-        }
-
-        function parseInput(id, transform = v => v) {
-            return document.getElementById(id).value.split(',').map(s => transform(s.trim())).filter(Boolean);
-        }
-
-        function applyFiltersAndRender() {
-            // Clear expanded groups only on initial load
-            if (isInitialLoad) {
-                expandedGroupIds.clear();
+    
+            const span = e.target.closest('span');
+            if (!span) return;
+            span.dataset.categoryId ? toggleTable(span) : toggleTree(span);
+        };
+    
+        function applyFilters() {
+            const selectedGender = gender.value;
+            if (selectedGender !== lastGender) {
+                genderFilteredProducts = selectedGender === 'other' ?
+                    products.filter(p => p.isGenderless) :
+                    products.filter(p => p.gender === selectedGender && !p.isGenderless);
+                lastGender = selectedGender;
             }
-            // Otherwise preserve the expandedGroupIds Set (already tracked in toggleSection)
-
-            const brand = parseInput('brand', s => s.toLowerCase());
-            const color = parseInput('color', s => s.toLowerCase());
-            const size = parseInput('size', s => s.match(/[\d.]+/)?.[0] || s.trim().toUpperCase());
-            const gender = document.getElementById('gender').value;
-            const sortBy = document.getElementById('sort_by').value;
-            const minDiscount = parseFloat(document.getElementById('min_discount').value) || 0;
-            const minPrice = parseFloat(document.getElementById('min_price').value) || 0;
-            const maxPrice = parseFloat(document.getElementById('max_price').value) || Infinity;
-
-            // Pre-filter by gender (cache since it rarely changes)
-            if (gender !== lastGender) {
-                genderFilteredProducts = allProducts.filter(p =>
-                    gender === 'other' ? p.isGenderless : (p.gender === gender && !p.isGenderless)
-                );
-                lastGender = gender;
-            }
-
-            // Cache filter array lengths outside the loop
-            const hasBrandFilter = brand.length > 0;
-            const hasColorFilter = color.length > 0;
-            const hasSizeFilter = size.length > 0;
-
-            // Order filters by selectivity (most selective first) for early short-circuit
-            // Now filtering the smaller gender-filtered subset instead of all 100k products
-            filteredProducts = genderFilteredProducts.filter(p => {
-                if (hasBrandFilter && (!p.brandLower || !brand.some(b => p.brandLower.startsWith(b)))) return false;
-                if (hasSizeFilter && !size.some(s => (p.sizes || []).includes(s))) return false;
-                if (hasColorFilter && (!p.colorLower || !color.some(c => p.colorLower.includes(c)))) return false;
-                if (p.lowest < minPrice || p.lowest > maxPrice) return false;
-                if (p.discount < minDiscount) return false;
+            const filters = {
+                sizes: size.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean),
+                brands: brand.value.split(',').map(b => b.trim().toLowerCase()).filter(Boolean),
+                colors: color.value.split(',').map(c => c.trim().toLowerCase()).filter(Boolean),
+                minPrice: parseFloat(min_price.value) || 0,
+                maxPrice: parseFloat(max_price.value) || Infinity,
+                minDiscount: parseFloat(discount.value) || 0
+            };
+            currentlyFilteredProducts = genderFilteredProducts.filter(p => {
+                if (filters.brands.length && !filters.brands.some(b => p._brand.includes(b))) return false;
+                if (filters.sizes.length && !filters.sizes.some(s => p._sizes.includes(s))) return false;
+                if (filters.colors.length && !filters.colors.some(c => p._color.includes(c))) return false;
+                if (p.lowest < filters.minPrice || p.lowest > filters.maxPrice) return false;
+                if (p.discount < filters.minDiscount) return false;
                 return true;
-            });
-
-            filteredProducts.sort((a, b) => sortBy === 'price' ? a.lowest - b.lowest : b.discount - a.discount);
-
-            // Check if filtered results actually changed to avoid unnecessary re-renders
-            const currentFilteredIds = filteredProducts.length + ':' +
-                filteredProducts.slice(0, 10).map(p => p.productCode).join(',');
-
-            if (currentFilteredIds === lastFilteredProductIds) {
-                return; // Results unchanged, skip re-render to prevent image flickering
-            }
-            lastFilteredProductIds = currentFilteredIds;
-
-            groupedData = getGroupedData(filteredProducts);
-
-            renderSkeletonUI();
-            setupGroupObserver();
-
-            isInitialLoad = false;
+            }).sort((a, b) => sort.value === 'price' ? a.lowest - b.lowest : b.discount - a.discount);
         }
-
-        async function initialDataFetch() {
-            document.getElementById('progress-container').style.display = 'block';
-            try {
-                const [productsRes, categoriesRes] = await Promise.all([
-                    fetch('/products.json.br'),
-                    fetch('/categories.json.br')
-                ]);
-                if (!productsRes.ok) throw new Error(`HTTP error! status: ${productsRes.status}`);
-                if (!categoriesRes.ok) throw new Error(`HTTP error! status: ${categoriesRes.status}`);
-                allProducts = await productsRes.json();
-
-                // Normalize and pre-compute values for cleaner display and faster filtering
-                allProducts.forEach(p => {
-                    // Normalize and sort sizes
-                    if (p.sizes) {
-                        p.sizes = p.sizes
-                            .map(size => {
-                                // If size contains a number, extract just the numeric part (e.g., "8.5 US" -> "8.5")
-                                // Otherwise keep alphabetic sizes as-is (e.g., "XS", "ONE SIZE")
-                                return size.match(/[\d.]+/)?.[0] || size.trim();
-                            })
-                            .sort((a, b) => getSizeSortValue(a) - getSizeSortValue(b));
-                    }
-                    // Pre-compute lowercase for filtering
-                    p.brandLower = p.brand ? p.brand.toLowerCase() : '';
-                    p.colorLower = p.color ? p.color.toLowerCase() : '';
-                    // Pre-compute JSON-stringified images for data attributes
-                    p.imagesJson = JSON.stringify(p.images || []);
-                    // Pre-compute HTML-escaped description
-                    const desc = p.description || '';
-                    p.descriptionEscaped = desc.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                });
-
-                const categoriesData = await categoriesRes.json();
-
-                sectionToCatMap = {
-                    men: {},
-                    women: {},
-                    'everything-else': {}
-                };
-
-                Object.keys(categoriesData).forEach(section => {
-                    const cats = categoriesData[section];
-                    const map = sectionToCatMap[section];
-
-                    function traverse(catArr) {
-                        catArr.forEach(cat => {
-                            map[cat.id] = {
-                                name: cat.name,
-                                seoKeyword: cat.seoKeyword,
-                                level: cat.level
-                            };
-                            if (cat.children) traverse(cat.children);
-                        });
-                    }
-                    traverse(cats);
-                });
-
-                // Pre-compute category paths now that sectionToCatMap is ready
-                allProducts.forEach(p => {
-                    p.categoryPath = getCategoryPath(p);
-                });
-
-                const populateDatalist = (listId, values) => {
-                    const list = document.getElementById(listId);
-                    const fragment = document.createDocumentFragment();
-                    values.forEach(value => {
-                        const option = document.createElement('option');
-                        option.value = value;
-                        fragment.appendChild(option);
-                    });
-                    list.appendChild(fragment);
-                };
-
-                populateDatalist('brand-list', [...new Set(allProducts.map(p => p.brand))].sort());
-                populateDatalist('color-list', [...new Set(allProducts.map(p => p.color).filter(Boolean))].sort());
-
-                applyFiltersAndRender();
-            } catch (error) {
-                console.error('Failed to fetch product data:', error);
-                document.getElementById('nested-list').innerHTML = '<p style="text-align: center; color: red; padding: 2rem;">Error loading data. Please try again.</p>';
-            } finally {
-                document.getElementById('progress-container').style.display = 'none';
-            }
+    
+        function rerenderTable(table) {
+            const span = table.previousElementSibling;
+            const categoryId = span.dataset.categoryId;
+            const tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            const categoryProducts = currentlyFilteredProducts.filter(p => p.allCategoryIds?.includes(categoryId));
+            loadBatch(tbody, categoryProducts, 0);
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const debouncedApplyFilters = debounce(applyFiltersAndRender, 100);
-            document.querySelectorAll('#filters select, #filters input').forEach(el => {
-                el.addEventListener('change', applyFiltersAndRender);
-                el.addEventListener('input', debouncedApplyFilters);
-            });
-
-            sentinelObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const sentinel = entry.target;
-                        const groupKeyPath = JSON.parse(sentinel.dataset.groupKey);
-                        const nextIndex = parseInt(sentinel.dataset.nextIndex, 10);
-                        const products = deepGet(groupedData, groupKeyPath);
-                        const table = sentinel.previousElementSibling;
-                        const tbody = table.querySelector('tbody');
-
-                        if (products && tbody) {
-                            appendTableRows(tbody, products, nextIndex, CHUNK_SIZE);
-                            const newNextIndex = nextIndex + CHUNK_SIZE;
-
-                            if (newNextIndex >= products.length) {
-                                observer.unobserve(sentinel);
-                                sentinel.remove();
-                            } else {
-                                sentinel.dataset.nextIndex = newNextIndex;
-                            }
-                        }
-                    }
-                });
-            }, {
-                rootMargin: '400px'
-            });
-
-            document.getElementById('nested-list').addEventListener('click', e => {
-                if (e.target.classList.contains('product-thumbnail')) {
-                    const clickedWrapper = e.target.parentElement;
-                    const isExpanding = !clickedWrapper.classList.contains('expanded');
-                    const previouslyExpandedWrapper = document.querySelector('.image-wrapper.expanded');
-
-                    if (previouslyExpandedWrapper) {
-                        previouslyExpandedWrapper.classList.remove('expanded');
-                        previouslyExpandedWrapper.style.transform = ''; // Clear adjustments
-                        manageImageNav(previouslyExpandedWrapper, false);
-                    }
-
-                    if (isExpanding && clickedWrapper !== previouslyExpandedWrapper) {
-                        clickedWrapper.classList.add('expanded');
-                        manageImageNav(clickedWrapper, true);
-
-                        requestAnimationFrame(() => {
-                            const header = document.querySelector('.site-header');
-                            const headerHeight = header ? header.getBoundingClientRect().height : 0;
-                            const rect = clickedWrapper.getBoundingClientRect();
-                            const viewportHeight = window.innerHeight;
-                            let adjustment = 0;
-                            const margin = 10;
-
-                            if (rect.top < headerHeight + margin) {
-                                adjustment = (headerHeight + margin) - rect.top;
-                            } else if (rect.bottom > viewportHeight - margin) {
-                                adjustment = (viewportHeight - margin) - rect.bottom;
-                            }
-
-                            if (adjustment !== 0) {
-                                clickedWrapper.style.transform = `translateY(-50%) translateY(${adjustment}px)`;
-                            }
-                        });
-
-                    } else if (!isExpanding) {
-                        const thumbnail = clickedWrapper.querySelector('.product-thumbnail');
-                        const images = JSON.parse(clickedWrapper.dataset.images || '[]');
-                        if (images.length > 0) {
-                            thumbnail.src = images[0];
-                            clickedWrapper.dataset.currentIndex = "0";
-                        }
-                    }
+    
+        function handleFilterChange() {
+            applyFilters();
+            catalog.querySelectorAll('table').forEach(table => {
+                if (table.style.display !== 'none') {
+                    rerenderTable(table);
                 }
             });
-
-            initialDataFetch();
-        });
-
-        function manageImageNav(wrapper, shouldShow) {
-            wrapper.querySelectorAll('.image-nav-arrow').forEach(arrow => arrow.remove());
-            if (!shouldShow) return;
-            const images = JSON.parse(wrapper.dataset.images || '[]');
-            if (images.length <= 1) return;
-            const createArrow = (direction) => {
-                const arrow = document.createElement('button');
-                arrow.className = `image-nav-arrow ${direction}`;
-                arrow.innerHTML = direction === 'left' ? '&#10094;' : '&#10095;';
-                arrow.onclick = (e) => {
-                    e.stopPropagation();
-                    const currentIndex = parseInt(wrapper.dataset.currentIndex, 10);
-                    const totalImages = images.length;
-                    const newIndex = (currentIndex + (direction === 'left' ? -1 : 1) + totalImages) % totalImages;
-                    wrapper.dataset.currentIndex = newIndex;
-                    wrapper.querySelector('img.product-thumbnail').src = images[newIndex];
-                };
-                wrapper.appendChild(arrow);
+        }
+    
+        gender.onchange = () => {
+            renderCatalog();
+            handleFilterChange();
+        };
+    
+        let timeout;
+        [size, brand, color, min_price, max_price, discount, sort].forEach(el => {
+            el.oninput = () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(handleFilterChange, 100);
             };
-            ['left', 'right'].forEach(createArrow);
+        });
+    
+        function renderCatalog() {
+            const section = gender.value === 'other' ? 'everything-else' : gender.value;
+            catalog.innerHTML = `<ul>${categories[section].map(buildNode).join('')}</ul>`;
+        }
+    
+        function buildNode(c) {
+            return c.children?.length ?
+                `<li><span><span class="toggle">+</span>${c.name}</span><ul style="display:none"><li><span data-category-id="${c.id}"><span class="toggle">+</span>ALL</span></li>${c.children.map(buildNode).join('')}</ul></li>` :
+                `<li><span data-category-id="${c.id}"><span class="toggle">+</span>${c.name}</span></li>`;
+        }
+    
+        function toggleTree(span) {
+            const ul = span.nextElementSibling;
+            if (ul?.tagName === 'UL') {
+                const isHidden = ul.style.display === 'none';
+                ul.style.display = isHidden ? 'block' : 'none';
+                const toggle = span.querySelector('.toggle');
+                if (toggle) toggle.textContent = isHidden ? '−' : '+';
+            }
+        }
+    
+        function toggleTable(span) {
+            const li = span.parentElement;
+            let table = li.querySelector('table');
+            const toggle = span.querySelector('.toggle');
+    
+            if (table) {
+                const isHidden = table.style.display === 'none';
+                table.style.display = isHidden ? 'table' : 'none';
+                if (toggle) toggle.textContent = isHidden ? '−' : '+';
+                return;
+            }
+    
+            if (toggle) toggle.textContent = '−';
+            
+            const categoryProducts = currentlyFilteredProducts.filter(p => p.allCategoryIds?.includes(span.dataset.categoryId));
+    
+            const tableHTML = `<table>
+                <thead>
+                    <tr>
+                        <th class="table-image">Image</th>
+                        <th class="table-product">Product</th>
+                        <th class="table-brand">Brand</th>
+                        <th class="table-sizes">Sizes</th>
+                        <th class="table-sale">Sale</th>
+                        <th class="table-regular">Reg.</th>
+                        <th class="table-discount">%Off</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>`;
+            li.insertAdjacentHTML('beforeend', tableHTML);
+            table = li.querySelector('table');
+            table.style.display = 'table';
+            loadBatch(table.querySelector('tbody'), categoryProducts, 0);
+        }
+    
+        function loadBatch(tbody, products, idx) {
+            const rows = products.slice(idx, idx + 50).map(p => {
+                const hue = Math.min(p.discount / 90, 1) * 120;
+                return `<tr>
+                    <td class="table-image"><img src="${p.images?.[0] || ''}" alt="${p.name}"></td>
+                    <td class="table-product"><a href="${p.url}" target="_blank">${p.name}</a></td>
+                    <td class="table-brand">${p.brand}</td>
+                    <td class="table-sizes">${p.sizes.join(', ')}</td>
+                    <td class="table-sale">$${p.lowest}</td>
+                    <td class="table-regular">$${p.regular}</td>
+                    <td class="table-discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td>
+                </tr>`;
+            }).join('');
+            tbody.insertAdjacentHTML('beforeend', rows);
+    
+            if (idx + 20 < products.length) {
+                const sentinel = tbody.insertAdjacentElement('beforeend', document.createElement('tr'));
+                new IntersectionObserver((e, o) => {
+                    if (e[0].isIntersecting) {
+                        o.disconnect();
+                        sentinel.remove();
+                        loadBatch(tbody, products, idx + 20);
+                    }
+                }).observe(sentinel);
+            }
         }
     </script>
-</body>
+    </body>
 </html>
