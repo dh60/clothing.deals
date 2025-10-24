@@ -193,7 +193,7 @@
         let genderFilteredProducts = [];
         let currentlyFilteredProducts = [];
         let lastGender = '';
-    
+
         // Load and pre-process data
         Promise.all([
             fetch('/categories.json.br').then(r => r.json()),
@@ -391,27 +391,26 @@
         }
     
         function loadBatch(tbody, products, idx) {
-            const rows = products.slice(idx, idx + 50).map(p => {
-                const hue = Math.min(p.discount / 90, 1) * 120;
+            tbody.insertAdjacentHTML('beforeend', products.slice(idx, idx + 30).map(p => {
                 return `<tr>
-                    <td class="table-image"><img src="${p.images?.[0] || ''}" alt="${p.name}"></td>
+                    <td class="table-image"><img src="${p.images[0]}" alt="${p.name}"></td>
                     <td class="table-product"><a href="${p.url}" target="_blank">${p.name}</a></td>
                     <td class="table-brand">${p.brand}</td>
                     <td class="table-sizes">${p.sizes.join(', ')}</td>
                     <td class="table-sale">$${p.lowest}</td>
                     <td class="table-regular">$${p.regular}</td>
-                    <td class="table-discount" style="background-color:hsl(${hue},80%,85%)">${p.discount}%</td>
+                    <td class="table-discount" style="background-color:hsl(${Math.min(p.discount / 90, 1) * 120},80%,85%)">${p.discount}%</td>
                 </tr>`;
-            }).join('');
-            tbody.insertAdjacentHTML('beforeend', rows);
-    
-            if (idx + 20 < products.length) {
-                const sentinel = tbody.insertAdjacentElement('beforeend', document.createElement('tr'));
+            }).join(''));
+
+            if (idx + 30 < products.length) {
+                const sentinel = document.createElement('tr');
+                tbody.querySelectorAll('tr')[tbody.querySelectorAll('tr').length - 10].after(sentinel);
                 new IntersectionObserver((e, o) => {
                     if (e[0].isIntersecting) {
                         o.disconnect();
                         sentinel.remove();
-                        loadBatch(tbody, products, idx + 20);
+                        loadBatch(tbody, products, idx + 30);
                     }
                 }).observe(sentinel);
             }
