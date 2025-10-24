@@ -28,7 +28,7 @@ python ssense.py
 python run.py
 ```
 
-Then open your browser and go to:
+A tab should automatically open in your browser. If it doesn't, navigate your browser to:
 [http://localhost:8000](http://localhost:8000)
 
 ## Installation
