@@ -32,7 +32,7 @@ A tab should automatically open in your browser. If it doesn't, navigate your br
 [http://localhost:8000](http://localhost:8000)
 
 ## Installation
-
+[Make sure you have Python 3.9 or higher installed. The latest version is recommended.](https://www.python.org/downloads/)
 Open your terminal, then enter these commands:
 
 1.  **Clone the repository:**
@@ -66,3 +66,5 @@ Open your terminal, then enter these commands:
     ```sh
     patchright install chromium --no-shell
     ```
+
+Now you can get started! Start by running the scraper (see Usage).
