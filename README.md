@@ -20,7 +20,7 @@ A high-performance web scraper and single-page application for browsing clothing
 python ssense.py
 ```
 
--   **Important**: If a CAPTCHA is detected, you must solve the CAPTCHA in the browser, then press enter in the terminal to resume.
+If a CAPTCHA is detected, you must solve the CAPTCHA in the browser, then press enter in the terminal to resume.
 
 #### Step 2: Run the server and view the app.
 
