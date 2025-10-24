@@ -33,6 +33,8 @@ A tab should automatically open in your browser. If it doesn't, navigate your br
 
 ## Installation
 
+Open your terminal, then enter these commands:
+
 1.  **Clone the repository:**
     ```sh
     git clone https://github.com/dh60/clothing.deals.git
