@@ -14,6 +14,7 @@ DELAY = 5 # Error retry delay. Wouldn't go lower than 5.
 RETRIES = 3 # Error retry count. If you're using all 3 retries then increase delay.
 
 async def fetch(url, page, pool, lock, nocaptcha):
+    last_error = None
     for attempt in range(RETRIES):
         await nocaptcha.wait() # Only allowed to fetch if no CAPTCHA is active.
         async with pool:
@@ -32,11 +33,11 @@ async def fetch(url, page, pool, lock, nocaptcha):
                             input("CAPTCHA detected! Solve it in the browser, then press Enter here to continue...")
                             nocaptcha.set()
                     continue
-                tqdm.write(f"{status} for {url}, Attempt {attempt + 1}/{RETRIES}")
-            except Exception:
-                tqdm.write(f"Error for {url}, Attempt {attempt + 1}/{RETRIES}")
+                last_error = f"status {status}"
+            except Exception as e:
+                last_error = f"exception: {e}"
         await asyncio.sleep(DELAY)
-    tqdm.write(f"Skipping {url} after {RETRIES} retries.")
+    tqdm.write(f"Skipping {url} after {RETRIES} retries ({last_error}).")
     return None
 
 async def main():
@@ -88,40 +89,39 @@ async def main():
                 return None
             try:
                 data = orjson.loads(content)
-                if "product" in data:
-                    p = data["product"]
-                    return {
-                        "name": p["name"]["en"],
-                        "brand": p["brand"]["name"]["en"],
-                        "gender": p["gender"],
-                        "isGenderless": p["isGenderless"],
-                        "allCategoryIds": p["allCategoryIds"],
-                        "category": p["category"]["id"],
-                        "regular": (regular := p["price"][0]["regular"]),
-                        "lowest": (lowest := p["price"][0]["lowest"]["amount"]),
-                        "description": p["description"]["en"],
-                        "sizes": [v["size"]["name"] for v in p["variants"] if v["inStock"]],
-                        "url": url,
-                        "images": images,
-                        "discount": round(((regular - lowest) / regular) * 100) if regular > lowest else 0,
-                        "productCode": p["productCode"],
-                        "color": p["primaryColor"].get("en"),
-                        "composition": p["composition"]["en"],
-                        "country": p["countryOrigin"]["nameByLanguage"]["en"],
-                    }
+                if "product" not in data:
+                    return None  # Sold out / redirected to brand page
+                p = data["product"]
+                return {
+                    "name": p["name"]["en"],
+                    "brand": p["brand"]["name"]["en"],
+                    "gender": p["gender"],
+                    "isGenderless": p["isGenderless"],
+                    "allCategoryIds": p["allCategoryIds"],
+                    "category": p["category"]["id"],
+                    "regular": (regular := p["price"][0]["regular"]),
+                    "lowest": (lowest := p["price"][0]["lowest"]["amount"]),
+                    "description": p["description"]["en"],
+                    "sizes": [v["size"]["name"] for v in p["variants"] if v["inStock"]],
+                    "url": url,
+                    "images": images,
+                    "discount": round(((regular - lowest) / regular) * 100) if regular > lowest else 0,
+                    "productCode": p["productCode"],
+                    "color": p["primaryColor"].get("en"),
+                    "composition": p["composition"]["en"],
+                    "country": p["countryOrigin"]["nameByLanguage"]["en"],
+                }
             except Exception as e:
-                tqdm.write(f"Data parsing error for {url}: {e}")
-            return None
+                tqdm.write(f"Error parsing {url}: {e}")
+                return None
 
-        products = []
         scrape_tasks = [scrape(url, images) for url, images in product_urls]
         products = [p for p in await tqdm.gather(*scrape_tasks, desc="Scraping", mininterval=1) if p is not None]
 
     # Step 4: Compress all scraped data to a JSON file.
-    tqdm.write(f"Saving {len(products)} products (this might take a few minutes)...")
+    print(f"Saving {len(products)} products (this might take a few minutes)...")
     with open("products.json.br", "wb") as f:
         f.write(brotli.compress(orjson.dumps(products), quality=11))
     print(f"Export complete. Total time: {time() - start:.2f} seconds.")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
