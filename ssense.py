@@ -52,8 +52,7 @@ async def main():
     NS_IMAGE = "http://www.google.com/schemas/sitemap-image/1.1"
 
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        page = await browser.new_page()
+        page = await (await p.chromium.launch(headless=False)).new_page()
         await page.goto(f"{BASE}/men")
         
         # Step 1: Fetch and save structured category data.
@@ -90,7 +89,7 @@ async def main():
             try:
                 data = orjson.loads(content)
                 if "product" not in data:
-                    return None  # Sold out / redirected to brand page
+                    return None
                 p = data["product"]
                 return {
                     "name": p["name"]["en"],
@@ -116,7 +115,7 @@ async def main():
                 return None
 
         scrape_tasks = [scrape(url, images) for url, images in product_urls]
-        products = [p for p in await tqdm.gather(*scrape_tasks, desc="Scraping", mininterval=1) if p is not None]
+        products = [p for future in tqdm.as_completed(scrape_tasks, total=len(scrape_tasks), desc="Scraping", mininterval=1) if (p := await future)]
 
     # Step 4: Compress all scraped data to a JSON file.
     print(f"Saving {len(products)} products (this might take a few minutes)...")
