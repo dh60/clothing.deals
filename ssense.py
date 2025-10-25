@@ -1,4 +1,5 @@
 import asyncio
+import uvloop
 import orjson
 import brotli
 import re
@@ -9,9 +10,10 @@ from tqdm.asyncio import tqdm
 
 # Configuration
 BASE = "https://www.ssense.com/en-ca" # Not sure what happens if set to another country.
-LIMIT = 200 # Concurrency limit. Default 200, might have issues above this. Hard limit is 1350.
+LIMIT = 200 # Concurrency limit. Default 200, might have issues above this.
 DELAY = 5 # Error retry delay. Wouldn't go lower than 5.
-RETRIES = 3 # Error retry count. If you're using all 3 retries then increase delay.
+RETRIES = 5 # Error retry count. If you're using all retries then increase delay.
+BATCH = 20000 # How many fetches before creating a new page. Huge slowdowns above 30000.
 
 async def fetch(url, page, pool, lock, nocaptcha):
     last_error = None
@@ -51,10 +53,11 @@ async def main():
     NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
     NS_IMAGE = "http://www.google.com/schemas/sitemap-image/1.1"
 
-    async with async_playwright() as p:
-        page = await (await p.chromium.launch(headless=False)).new_page()
+    async with async_playwright() as pw:
+        browser = await pw.chromium.launch(headless=False)
+        page = await browser.new_page()
         await page.goto(f"{BASE}/men")
-        
+
         # Step 1: Fetch and save structured category data.
         print("Fetching categories...")
         sections = ["men", "women", "everything-else"]
@@ -63,7 +66,7 @@ async def main():
         print("Saving category data...")
         with open("categories.json.br", "wb") as f:
             f.write(brotli.compress(orjson.dumps(category_data), quality=11))
-        
+
         # Step 2: Fetch and parse product URLs from sitemaps.
         product_urls = []
         sitemap_xml = await fetch("https://www.ssense.com/sitemap.xml", page, pool, lock, nocaptcha)
@@ -83,39 +86,40 @@ async def main():
         # Step 3: Scrape JSON data for each product URL, and put it in a list.
         async def scrape(url, images):
             """Fetches and processes a single product's JSON data."""
-            content = await fetch(f"{url}.json", page, pool, lock, nocaptcha)
-            if content is None:
-                return None
             try:
-                data = orjson.loads(content)
-                if "product" not in data:
-                    return None
-                p = data["product"]
-                return {
-                    "name": p["name"]["en"],
-                    "brand": p["brand"]["name"]["en"],
-                    "gender": p["gender"],
-                    "isGenderless": p["isGenderless"],
-                    "allCategoryIds": p["allCategoryIds"],
-                    "category": p["category"]["id"],
-                    "regular": (regular := p["price"][0]["regular"]),
-                    "lowest": (lowest := p["price"][0]["lowest"]["amount"]),
-                    "description": p["description"]["en"],
-                    "sizes": [v["size"]["name"] for v in p["variants"] if v["inStock"]],
-                    "url": url,
-                    "images": images,
-                    "discount": round(((regular - lowest) / regular) * 100) if regular > lowest else 0,
-                    "productCode": p["productCode"],
-                    "color": p["primaryColor"].get("en"),
-                    "composition": p["composition"]["en"],
-                    "country": p["countryOrigin"]["nameByLanguage"]["en"],
-                }
-            except Exception as e:
-                tqdm.write(f"Error parsing {url}: {e}")
+                p = orjson.loads(await fetch(f"{url}.json", page, pool, lock, nocaptcha))["product"]
+            except (TypeError, orjson.JSONDecodeError, KeyError, asyncio.TimeoutError):
                 return None
+            return {
+                "name": p["name"]["en"],
+                "brand": p["brand"]["name"]["en"],
+                "gender": p["gender"],
+                "isGenderless": p["isGenderless"],
+                "allCategoryIds": p["allCategoryIds"],
+                "category": p["category"]["id"],
+                "regular": (regular := p["price"][0]["regular"]),
+                "lowest": (lowest := p["price"][0]["lowest"]["amount"]),
+                "description": p["description"]["en"],
+                "sizes": [v["size"]["name"] for v in p["variants"] if v["inStock"]],
+                "url": url,
+                "images": images,
+                "discount": round(((regular - lowest) / regular) * 100) if regular > lowest else 0,
+                "productCode": p["productCode"],
+                "color": p["primaryColor"].get("en"),
+                "composition": p["composition"]["en"],
+                "country": p["countryOrigin"]["nameByLanguage"]["en"],
+            }
 
-        scrape_tasks = [scrape(url, images) for url, images in product_urls]
-        products = [p for future in tqdm.as_completed(scrape_tasks, total=len(scrape_tasks), desc="Scraping", mininterval=1) if (p := await future)]
+        products = []
+        with tqdm(total=len(product_urls), desc="Scraping Products") as pbar:
+            for num in range(0, len(product_urls), BATCH):
+                await page.close()
+                page = await browser.new_page()
+                await page.goto(f"{BASE}/men")
+                for future in asyncio.as_completed([scrape(url, images) for url, images in product_urls[num:num+BATCH]]):
+                    pbar.update(1)
+                    if p := await future:
+                        products.append(p)
 
     # Step 4: Compress all scraped data to a JSON file.
     print(f"Saving {len(products)} products (this might take a few minutes)...")
@@ -123,4 +127,4 @@ async def main():
         f.write(brotli.compress(orjson.dumps(products), quality=11))
     print(f"Export complete. Total time: {time() - start:.2f} seconds.")
 
-asyncio.run(main())
+uvloop.run(main())
