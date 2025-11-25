@@ -5,3 +5,4 @@ lxml
 orjson
 tqdm
 brotli
+uvloop

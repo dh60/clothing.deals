@@ -6,17 +6,10 @@ app = FastAPI()
 @app.get("/")
 async def serve_index():
     return FileResponse("index.html")
-@app.get("/categories.json.br")
-async def serve_category_data():
+@app.get("/{filename}.json.br")
+async def serve_products(filename: str):
     return FileResponse(
-        "categories.json.br",
-        media_type="application/json",
-        headers={"Content-Encoding": "br"}
-    )
-@app.get("/products.json.br")
-async def serve_product_data():
-    return FileResponse(
-        "products.json.br",
+        f"{filename}.json.br",
         media_type="application/json",
         headers={"Content-Encoding": "br"}
     )
