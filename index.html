@@ -196,29 +196,167 @@
 
         // Load and pre-process data
         Promise.all([
-            fetch('/categories.json.br').then(r => r.json()),
-            fetch('/products.json.br').then(r => r.json())
-        ]).then(([c, p]) => {
-            categories = c;
+            fetch('/ssense_products.json.br').then(r => r.json()),
+            fetch('/thelasthunt_products.json.br').then(r => r.json())
+        ]).then(([ssense, tlh]) => {
+            // Merge products
+            let allProducts = [...ssense, ...tlh];
+
+            // Normalize category paths: for each leaf category, use the longest path
+            const leafPaths = {};
+            allProducts.forEach(product => {
+                const path = product.categoryPath || [];
+                if (path.length > 0) {
+                    const leaf = path[path.length - 1];
+                    if (!leafPaths[leaf] || path.length > leafPaths[leaf].length) {
+                        leafPaths[leaf] = path;
+                    }
+                }
+            });
+
+            // Build category merge map: merge singular categories into compound ones
+            // e.g., "SKIRTS" → "SKIRTS AND SKORTS", "GLOVES" → "GLOVES AND MITTENS"
+            // Only merge categories that appear at the SAME level in the hierarchy
+            const categoryMerges = {};
+
+            // Group categories by their parent context (to ensure we only merge at same level)
+            const categoryByParent = {};
+            allProducts.forEach(product => {
+                const path = product.categoryPath || [];
+                for (let i = 0; i < path.length; i++) {
+                    const cat = path[i];
+                    const parent = i > 0 ? path.slice(0, i).join(' > ') : '__ROOT__';
+                    if (!categoryByParent[parent]) {
+                        categoryByParent[parent] = new Set();
+                    }
+                    categoryByParent[parent].add(cat);
+                }
+            });
+
+            // Only merge categories that share the same parent
+            Object.entries(categoryByParent).forEach(([parent, categories]) => {
+                const catArray = Array.from(categories);
+                catArray.forEach(cat1 => {
+                    catArray.forEach(cat2 => {
+                        if (cat1 !== cat2 && cat1.length < cat2.length) {
+                            // Only merge into compound categories (contain AND or &)
+                            if (cat2.includes(' AND ') || cat2.includes(' & ')) {
+                                // Check if cat1 is a word within cat2
+                                const pattern = new RegExp(`\\b${cat1.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+                                if (pattern.test(cat2)) {
+                                    // Merge cat1 into cat2 (prefer the longer, more specific name)
+                                    // Store with parent context to avoid cross-hierarchy merges
+                                    const key = `${parent}::${cat1}`;
+                                    const value = `${parent}::${cat2}`;
+                                    if (!categoryMerges[key] || cat2.length > categoryMerges[key].split('::')[1]?.length) {
+                                        categoryMerges[key] = value;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+
+            // Remap products to use merged categories in their entire path
+            allProducts = allProducts.map(product => {
+                let path = product.categoryPath || [];
+                if (path.length === 0) return product;
+
+                // Replace any category in the path with its merged version (checking parent context)
+                // Build new path incrementally to track parent correctly
+                const newPath = [];
+                for (let idx = 0; idx < path.length; idx++) {
+                    const cat = path[idx];
+                    const parent = idx > 0 ? newPath.slice(0, idx).join(' > ') : '__ROOT__';
+                    const key = `${parent}::${cat}`;
+                    if (categoryMerges[key]) {
+                        newPath.push(categoryMerges[key].split('::')[1]);
+                    } else {
+                        newPath.push(cat);
+                    }
+                }
+
+                // Then apply longest path logic for the leaf category
+                const leaf = newPath[newPath.length - 1];
+                const preferredPath = leafPaths[leaf];
+                if (preferredPath && preferredPath.length > newPath.length) {
+                    return { ...product, categoryPath: preferredPath };
+                }
+
+                return { ...product, categoryPath: newPath };
+            });
+
+            // Build category tree from all categoryPath arrays
+            categories = buildCategoryTree(allProducts);
+
             // Pre-compute normalized fields for fast filtering
-            products = p.map(product => {
+            products = allProducts.map(product => {
                 // Clean sizes: remove country codes and type prefixes
                 const cleanedSizes = (product.sizes || []).map(size => {
                     return size.match(/[\d.]+/)?.[0] || size.trim();
                 });
+                // Pre-compute category path ID for fast lookup (categories already uppercase from scrapers)
+                const categoryPathId = (product.categoryPath || [])
+                    .join(' > ')
+                    .replace(/[^A-Z0-9]+/g, '-');
                 return {
                     ...product,
                     _brand: product.brand.toLowerCase(),
                     _color: (product.color || '').toLowerCase(),
                     _sizes: cleanedSizes.map(s => s.toLowerCase()),
+                    _categoryPathId: categoryPathId,
                     sizes: cleanedSizes
                 };
             });
-    
+
             applyFilters();
             renderCatalog();
         });
     
+        function buildCategoryTree(products) {
+            const tree = { men: {}, women: {}, other: {} };
+
+            products.forEach(product => {
+                const section = product.gender;
+                const path = product.categoryPath || [];
+
+                if (!tree[section]) return;
+
+                // Build nested tree structure
+                let current = tree[section];
+                let fullPath = '';
+
+                path.forEach((catName, idx) => {
+                    fullPath += (fullPath ? ' > ' : '') + catName;
+
+                    if (!current[catName]) {
+                        current[catName] = {
+                            id: fullPath.replace(/[^A-Z0-9]+/g, '-'),
+                            name: catName,
+                            children: {}
+                        };
+                    }
+                    current = current[catName].children;
+                });
+            });
+
+            // Convert to array format (sorted alphabetically)
+            function objectToArray(obj) {
+                return Object.keys(obj).sort().map(key => ({
+                    id: obj[key].id,
+                    name: obj[key].name,
+                    children: objectToArray(obj[key].children)
+                }));
+            }
+
+            return {
+                men: objectToArray(tree.men),
+                women: objectToArray(tree.women),
+                other: objectToArray(tree.other)
+            };
+        }
+
         // Event delegation for catalog clicks
         catalog.onclick = e => {
             // Handle image clicks - create overlay
@@ -278,9 +416,7 @@
         function applyFilters() {
             const selectedGender = gender.value;
             if (selectedGender !== lastGender) {
-                genderFilteredProducts = selectedGender === 'other' ?
-                    products.filter(p => p.isGenderless) :
-                    products.filter(p => p.gender === selectedGender && !p.isGenderless);
+                genderFilteredProducts = products.filter(p => p.gender === selectedGender);
                 lastGender = selectedGender;
             }
             const filters = {
@@ -307,7 +443,9 @@
             const tbody = table.querySelector('tbody');
             if (!tbody) return;
             tbody.innerHTML = '';
-            const categoryProducts = currentlyFilteredProducts.filter(p => p.allCategoryIds?.includes(categoryId));
+            const categoryProducts = currentlyFilteredProducts.filter(p => {
+                return p._categoryPathId.includes(categoryId) || p._categoryPathId === categoryId;
+            });
             loadBatch(tbody, categoryProducts, 0);
         }
     
@@ -334,7 +472,7 @@
         });
     
         function renderCatalog() {
-            const section = gender.value === 'other' ? 'everything-else' : gender.value;
+            const section = gender.value;
             catalog.innerHTML = `<ul>${categories[section].map(buildNode).join('')}</ul>`;
         }
     
@@ -368,7 +506,9 @@
     
             if (toggle) toggle.textContent = '−';
             
-            const categoryProducts = currentlyFilteredProducts.filter(p => p.allCategoryIds?.includes(span.dataset.categoryId));
+            const categoryProducts = currentlyFilteredProducts.filter(p => {
+                return p._categoryPathId === span.dataset.categoryId || p._categoryPathId.startsWith(span.dataset.categoryId + '-');
+            });
     
             const tableHTML = `<table>
                 <thead>
