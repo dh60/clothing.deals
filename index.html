@@ -196,8 +196,8 @@
 
         // Load and pre-process data
         Promise.all([
-            fetch('/ssense_products.json.br').then(r => r.json()),
-            fetch('/thelasthunt_products.json.br').then(r => r.json())
+            fetch('/products_ssense.json.br').then(r => r.json()),
+            fetch('/products_thelasthunt.json.br').then(r => r.json())
         ]).then(([ssense, tlh]) => {
             // Merge products
             let allProducts = [...ssense, ...tlh];

@@ -192,7 +192,7 @@ async def main():
 
     # Step 4: Compress all scraped data to a JSON file
     print(f"Saving {len(products)} products (this might take a few minutes)...")
-    with open("thelasthunt_products.json.br", "wb") as f:
+    with open("products_thelasthunt.json.br", "wb") as f:
         f.write(brotli.compress(orjson.dumps(products), quality=11))
     print(f"Export complete. Total time: {time() - start:.2f} seconds.")
 
