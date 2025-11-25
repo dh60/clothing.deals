@@ -14,10 +14,10 @@ A high-performance web scraper and single-page application for browsing clothing
 ## Usage
 ![clothing.deals terminal](screenshots/terminal.png)
 
-#### Step 1: Run the Scraper
+#### Step 1: Run the Scrapers
 
 ```sh
-python ssense.py
+python scrape_ssense.py && python scrape_thelasthunt.py
 ```
 
 If a CAPTCHA is detected, you must solve the CAPTCHA in the browser, then press enter in the terminal to resume.
@@ -25,7 +25,7 @@ If a CAPTCHA is detected, you must solve the CAPTCHA in the browser, then press 
 #### Step 2: Run the server and view the app.
 
 ```sh
-python run.py
+python server.py
 ```
 
 A tab should automatically open in your browser. If it doesn't, navigate your browser to:
@@ -46,10 +46,7 @@ Open your terminal, then enter these commands:
 2.  **Create and activate a virtual environment:**
     -   **macOS/Linux:**
         ```sh
-        python3 -m venv venv
-        ```
-        ```sh
-        source venv/bin/activate
+        python3 -m venv venv && source venv/bin/activate
         ```
     -   **Windows:**
         ```sh
@@ -61,10 +58,7 @@ Open your terminal, then enter these commands:
 
 3.  **Install dependencies:**
     ```sh
-    pip install -r requirements.txt
-    ```
-    ```sh
-    patchright install chromium --no-shell
+    pip install -r requirements.txt && patchright install chromium --no-shell
     ```
 
 Now you can get started! Start by running the scraper (see Usage).
