@@ -26,11 +26,11 @@ python scrape_ssense.py && python scrape_thelasthunt.py
 python server.py
 ```
 
-A tab should automatically open in your browser. If it doesn't, navigate your browser to:
-[http://localhost:8000](http://localhost:8000)
+A tab should automatically open in your browser.
 
 ## Installation
 [Python 3.10 or higher required. The latest version is recommended.](https://www.python.org/downloads/)
+
 Open your terminal, then enter these commands:
 
 1.  **Clone the repository:**
