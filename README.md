@@ -20,8 +20,6 @@ A high-performance web scraper and single-page application for browsing clothing
 python scrape_ssense.py && python scrape_thelasthunt.py
 ```
 
-If a CAPTCHA is detected, you must solve the CAPTCHA in the browser, then press enter in the terminal to resume.
-
 #### Step 2: Run the server and view the app.
 
 ```sh
@@ -32,7 +30,7 @@ A tab should automatically open in your browser. If it doesn't, navigate your br
 [http://localhost:8000](http://localhost:8000)
 
 ## Installation
-[Make sure you have Python 3.9 or higher installed. The latest version is recommended.](https://www.python.org/downloads/)
+[Python 3.10 or higher required. The latest version is recommended.](https://www.python.org/downloads/)
 Open your terminal, then enter these commands:
 
 1.  **Clone the repository:**
